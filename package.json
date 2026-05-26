@@ -1,0 +1,14 @@
+{
+  "name": "turni-aquamore",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App Piscine Aquamore per gestione turni, dipendenti, presenze e richieste.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

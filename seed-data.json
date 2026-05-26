@@ -1,0 +1,75 @@
+{
+  "employees": [],
+  "shiftPresets": {
+    "Mattina": {
+      "start": "08:00",
+      "end": "14:00",
+      "category": "day",
+      "color": "#95ddd8"
+    },
+    "Pomeriggio": {
+      "start": "14:00",
+      "end": "20:00",
+      "category": "day",
+      "color": "#95ddd8"
+    },
+    "Giornata": {
+      "start": "09:00",
+      "end": "17:00",
+      "category": "day",
+      "color": "#95ddd8"
+    },
+    "Apertura": {
+      "start": "07:30",
+      "end": "13:30",
+      "category": "open",
+      "color": "#69bea7"
+    },
+    "Chiusura": {
+      "start": "15:00",
+      "end": "21:00",
+      "category": "evening",
+      "color": "#f2a08e"
+    },
+    "Giorno di riposo": {
+      "start": "",
+      "end": "",
+      "category": "rest",
+      "color": "#f1f1f3"
+    },
+    "Ferie": {
+      "start": "",
+      "end": "",
+      "category": "leave",
+      "color": "#f7ecd6"
+    }
+  },
+  "shiftsByWeek": {
+    "0": []
+  },
+  "weekOffset": 0,
+  "appMode": "manager",
+  "activeEmployeeId": "",
+  "companySettings": {
+    "companyName": "Piscine Aquamore",
+    "roles": [
+      "Reception",
+      "Bagnini",
+      "Istruttori",
+      "Pulizie",
+      "Bar"
+    ],
+    "workplaces": [
+      "Piscine Aquamore"
+    ],
+    "employerFiscalCode": "",
+    "agencyEmail": ""
+  },
+  "timeOffRequests": [],
+  "attendanceRecords": [],
+  "publishedWeeks": {},
+  "publishedDays": {},
+  "notificationLog": [],
+  "notificationStatus": {},
+  "activityLog": []
+}

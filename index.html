@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Turni Ristorante</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow" id="brandCompanyName">Piscine Aquamore</p>
+          <h1>Gestione turni</h1>
+        </div>
+
+        <div class="week-control" aria-label="Controlli settimana">
+          <button class="icon-button" id="prevWeek" type="button" aria-label="Settimana precedente">‹</button>
+          <div>
+            <span class="control-label">Settimana</span>
+            <strong id="weekLabel"></strong>
+          </div>
+          <button class="icon-button" id="nextWeek" type="button" aria-label="Settimana successiva">›</button>
+        </div>
+
+        <div class="segmented-control" role="tablist" aria-label="Visuale calendario">
+          <button class="segment active" type="button" data-view="employee" role="tab" aria-selected="true">Dipendenti</button>
+          <button class="segment" type="button" data-view="day" role="tab" aria-selected="false">Turni del giorno</button>
+        </div>
+      </header>
+
+      <section class="account-bar" aria-label="Accesso prototipo">
+        <label class="select-field">
+          <span>Accesso</span>
+          <select id="roleMode">
+            <option value="manager">Manager</option>
+            <option value="employee">Dipendente</option>
+          </select>
+        </label>
+        <label class="select-field employee-account-field hidden">
+          <span>Dipendente</span>
+          <select id="employeeAccountSelect"></select>
+        </label>
+        <div class="account-summary" id="accountSummary">Vista manager</div>
+        <div class="week-publication" id="weekPublication">
+          <span id="weekPublicationStatus">Bozza</span>
+          <button class="ghost-button" id="toggleWeekPublication" type="button">Pubblica settimana</button>
+          <select id="dayPublicationSelect" aria-label="Giorno da pubblicare"></select>
+          <button class="ghost-button" id="toggleDayPublication" type="button">Pubblica giorno</button>
+        </div>
+        <button class="ghost-button hidden" id="logoutButton" type="button">Esci</button>
+      </section>
+
+      <aside class="toolbar">
+        <label class="search-field">
+          <span>Cerca</span>
+          <input id="searchInput" type="search" placeholder="Nome dipendente o turno">
+        </label>
+
+        <label class="select-field">
+          <span>Reparto</span>
+          <select id="roleFilter">
+            <option value="all">Tutti</option>
+            <option value="Reception">Reception</option>
+            <option value="Bagnini">Bagnini</option>
+            <option value="Istruttori">Istruttori</option>
+            <option value="Pulizie">Pulizie</option>
+            <option value="Bar">Bar</option>
+          </select>
+        </label>
+
+        <button class="primary-button" id="openShiftForm" type="button">
+          <span aria-hidden="true">+</span>
+          Aggiungi turno
+        </button>
+        <button class="ghost-button" id="openEmployeeManager" type="button">
+          Dipendenti
+        </button>
+        <button class="ghost-button" id="openCopyPeriod" type="button">
+          Copia periodo
+        </button>
+        <button class="ghost-button" id="openNotifications" type="button">
+          Avvisa dipendenti
+        </button>
+        <button class="ghost-button" id="openIntermittenti" type="button">
+          Chiamate
+        </button>
+        <button class="ghost-button" id="openPrintExport" type="button">
+          Stampa / PDF
+        </button>
+        <button class="ghost-button" id="openAttendance" type="button">
+          Presenze
+        </button>
+        <button class="ghost-button" id="openBackups" type="button">
+          Backup
+        </button>
+        <button class="ghost-button" id="openHistory" type="button">
+          Storico
+        </button>
+        <button class="ghost-button" id="openCompanySettings" type="button">
+          Impostazioni
+        </button>
+      </aside>
+
+      <main class="main-grid">
+        <section id="managerDashboard" class="manager-dashboard hidden" aria-label="Dashboard manager">
+          <div class="dashboard-card">
+            <span>Richieste in attesa</span>
+            <strong id="dashPendingRequests">0</strong>
+          </div>
+          <div class="dashboard-card">
+            <span>Turni settimana</span>
+            <strong id="dashWeekShifts">0</strong>
+          </div>
+          <div class="dashboard-card">
+            <span>Dipendenti</span>
+            <strong id="dashEmployees">0</strong>
+          </div>
+          <div class="dashboard-card">
+            <span>PIN mancanti</span>
+            <strong id="dashDefaultPins">0</strong>
+          </div>
+          <div class="dashboard-card wide">
+            <span>Ultimo backup</span>
+            <strong id="dashLastBackup">Non disponibile</strong>
+          </div>
+          <div class="dashboard-actions">
+            <button class="primary-button" id="quickNewShift" type="button">Nuovo turno</button>
+            <button class="ghost-button" id="quickPendingRequests" type="button">Richieste</button>
+            <button class="ghost-button" id="quickPublishWeek" type="button">Pubblica</button>
+            <button class="ghost-button" id="quickAttendance" type="button">Presenze</button>
+            <button class="ghost-button" id="quickIntermittenti" type="button">Chiamate</button>
+          </div>
+        </section>
+
+        <section class="stats-strip" aria-label="Riepilogo settimana">
+          <div>
+            <span>Turni</span>
+            <strong id="totalShifts">0</strong>
+          </div>
+          <div>
+            <span>Ore programmate</span>
+            <strong id="totalHours">0h</strong>
+          </div>
+          <div>
+            <span>Riposi</span>
+            <strong id="totalRest">0</strong>
+          </div>
+          <div>
+            <span>Copertura media</span>
+            <strong id="avgCoverage">0/g</strong>
+          </div>
+        </section>
+
+        <section id="employeePortal" class="employee-portal hidden" aria-label="Area dipendente">
+          <div class="portal-head">
+          <div>
+            <p class="eyebrow">Area dipendente</p>
+            <h2 id="portalEmployeeName">I miei turni</h2>
+          </div>
+          <div class="portal-actions">
+            <button class="ghost-button" id="openPinDialog" type="button">Cambia PIN</button>
+            <button class="primary-button" id="openRequestDialog" type="button">Richiedi riposo o ferie</button>
+          </div>
+        </div>
+        <div id="myRequests" class="request-list"></div>
+      </section>
+
+        <section id="managerRequests" class="manager-requests hidden" aria-label="Richieste dipendenti">
+          <div class="portal-head">
+            <div>
+              <p class="eyebrow">Richieste</p>
+              <h2>Riposi e ferie da approvare</h2>
+            </div>
+          </div>
+          <div id="pendingRequests" class="request-list"></div>
+        </section>
+
+        <section class="schedule-shell" aria-live="polite">
+          <div id="employeeView" class="schedule-view"></div>
+          <div id="dayView" class="schedule-view hidden"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="loginDialog" class="shift-dialog">
+      <form method="dialog" id="loginForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Accesso</p>
+            <h2>Entra nell'app turni</h2>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Tipo account</span>
+            <select id="loginRole">
+              <option value="manager">Manager</option>
+              <option value="employee">Dipendente</option>
+            </select>
+          </label>
+          <label class="login-employee-field hidden">
+            <span>Dipendente</span>
+            <select id="loginEmployee"></select>
+          </label>
+          <label>
+            <span>Password / PIN</span>
+            <input id="loginPassword" type="password" placeholder="Inserisci password o PIN">
+          </label>
+        </div>
+
+        <p class="login-hint" id="loginHint">Usa le credenziali impostate dal manager.</p>
+        <p class="login-error hidden" id="loginError">Credenziali non valide.</p>
+
+        <div class="dialog-actions">
+          <button class="primary-button" value="default" type="submit">Entra</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="shiftDialog" class="shift-dialog">
+      <form method="dialog" id="shiftForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Nuovo elemento</p>
+            <h2 id="dialogTitle">Aggiungi al calendario</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Dipendente</span>
+            <select id="employeeSelect" required></select>
+          </label>
+          <label>
+            <span>Giorno</span>
+            <select id="daySelect" required></select>
+          </label>
+          <label>
+            <span>Predefinito</span>
+            <select id="typeSelect" required>
+            </select>
+          </label>
+          <label>
+            <span>Nome nuovo predefinito</span>
+            <input id="presetNameInput" type="text" placeholder="Es. Pranzo extra">
+          </label>
+          <label>
+            <span>Inizio</span>
+            <input id="startTime" type="time" value="10:00">
+          </label>
+          <label>
+            <span>Fine</span>
+            <input id="endTime" type="time" value="17:00">
+          </label>
+          <label>
+            <span>Colore scheda</span>
+            <input id="colorInput" type="color" value="#95ddd8">
+          </label>
+          <label>
+            <span>Luogo di lavoro</span>
+            <input id="workplaceInput" type="text" value="Piscine Aquamore" placeholder="Es. Piscine Aquamore" list="workplaceOptions">
+            <datalist id="workplaceOptions"></datalist>
+          </label>
+          <label>
+            <span>Note</span>
+            <input id="noteInput" type="text" placeholder="Es. chiusura, affiancamento">
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" value="default" type="button" id="savePresetButton">Salva predefinito</button>
+          <button class="ghost-button" value="cancel" type="button" id="cancelDialog">Annulla</button>
+          <button class="primary-button" value="default" type="submit" id="saveShiftButton">Salva turno</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="requestDialog" class="shift-dialog">
+      <form method="dialog" id="requestForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Richiesta</p>
+            <h2>Riposo o ferie</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeRequestDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div id="requestCalendar" class="request-calendar" aria-label="Calendario turni dipendente"></div>
+
+        <div class="form-grid">
+          <label>
+            <span>Settimana richiesta</span>
+            <select id="requestWeek"></select>
+          </label>
+          <label>
+            <span>Tipo richiesta</span>
+            <select id="requestType">
+              <option value="Giorno di riposo">Giorno di riposo</option>
+              <option value="Mezza giornata">Mezza giornata</option>
+              <option value="Ferie">Ferie</option>
+            </select>
+          </label>
+          <label>
+            <span>Giorno richiesto</span>
+            <select id="requestDay"></select>
+          </label>
+          <label class="half-day-field hidden">
+            <span>Dalle</span>
+            <input id="requestStartTime" type="time" value="09:00">
+          </label>
+          <label class="half-day-field hidden">
+            <span>Alle</span>
+            <input id="requestEndTime" type="time" value="13:00">
+          </label>
+          <label>
+            <span>Note</span>
+            <input id="requestNote" type="text" placeholder="Motivo o dettaglio opzionale">
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" value="cancel" type="button" id="cancelRequestDialog">Annulla</button>
+          <button class="primary-button" value="default" type="submit">Invia richiesta</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="pinDialog" class="shift-dialog">
+      <form method="dialog" id="pinForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Account</p>
+            <h2>Cambia PIN</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closePinDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>PIN attuale</span>
+            <input id="currentPinInput" type="password" inputmode="numeric" autocomplete="current-password">
+          </label>
+          <label>
+            <span>Nuovo PIN</span>
+            <input id="newPinInput" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="8" placeholder="Da 4 a 8 numeri">
+          </label>
+          <label>
+            <span>Ripeti nuovo PIN</span>
+            <input id="confirmPinInput" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="8">
+          </label>
+        </div>
+
+        <p class="login-error hidden" id="pinError">Controlla il PIN inserito.</p>
+        <p class="login-hint hidden" id="pinSuccess">PIN aggiornato.</p>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" value="cancel" type="button" id="cancelPinDialog">Annulla</button>
+          <button class="primary-button" value="default" type="submit">Salva PIN</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="employeeDialog" class="shift-dialog">
+      <form method="dialog" id="employeeForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Anagrafica</p>
+            <h2>Gestisci dipendenti</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeEmployeeDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="employee-manager">
+          <div class="form-grid">
+            <label>
+              <span>Nome</span>
+              <input id="newEmployeeName" type="text" placeholder="Nome e cognome">
+            </label>
+            <label>
+              <span>Reparto</span>
+              <select id="newEmployeeRole">
+                <option value="Reception">Reception</option>
+                <option value="Bagnini">Bagnini</option>
+                <option value="Istruttori">Istruttori</option>
+                <option value="Pulizie">Pulizie</option>
+                <option value="Bar">Bar</option>
+              </select>
+            </label>
+            <label>
+              <span>Ore contratto</span>
+              <input id="newEmployeeTarget" type="number" min="0" step="0.5" value="35">
+            </label>
+            <label>
+              <span>Colore avatar</span>
+              <input id="newEmployeeColor" type="color" value="#4aa7b3">
+            </label>
+            <label>
+              <span>PIN accesso</span>
+              <input id="newEmployeePin" type="text" inputmode="numeric" placeholder="4-8 numeri" value="">
+            </label>
+            <label>
+              <span>Telefono</span>
+              <input id="newEmployeePhone" type="tel" placeholder="Es. +39 333 1234567">
+            </label>
+            <label>
+              <span>Email</span>
+              <input id="newEmployeeEmail" type="email" placeholder="nome@email.it">
+            </label>
+            <label class="checkbox-field">
+              <input id="newEmployeeIntermittent" type="checkbox">
+              <span>Dipendente a chiamata</span>
+            </label>
+            <label>
+              <span>Codice fiscale</span>
+              <input id="newEmployeeFiscalCode" type="text" placeholder="Codice fiscale dipendente">
+            </label>
+            <label>
+              <span>Codice comunicazione</span>
+              <input id="newEmployeeCommunicationCode" type="text" placeholder="Se disponibile">
+            </label>
+          </div>
+
+          <div class="employee-form-actions">
+            <button class="ghost-button hidden" id="cancelEmployeeEdit" type="button">Annulla modifica</button>
+            <button class="primary-button" id="addEmployeeButton" type="button">Aggiungi dipendente</button>
+          </div>
+
+          <div class="employee-list" id="employeeList" aria-label="Elenco dipendenti"></div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="copyDialog" class="shift-dialog">
+      <form method="dialog" id="copyForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Duplicazione</p>
+            <h2>Copia periodo</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeCopyDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="copy-panel">
+          <div class="copy-mode">
+            <label>
+              <input type="radio" name="copyMode" value="week" checked>
+              <span>Settimana intera</span>
+            </label>
+            <label>
+              <input type="radio" name="copyMode" value="day">
+              <span>Singolo giorno</span>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="day-copy-field">
+              <span>Giorno da copiare</span>
+              <select id="copySourceDay"></select>
+            </label>
+            <label>
+              <span>Settimana destinazione</span>
+              <select id="copyTargetWeek"></select>
+            </label>
+            <label class="day-copy-field">
+              <span>Giorno destinazione</span>
+              <select id="copyTargetDay"></select>
+            </label>
+            <label class="checkbox-field">
+              <input id="replaceTarget" type="checkbox" checked>
+              <span>Sostituisci i turni già presenti</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" value="cancel" type="button" id="cancelCopyDialog">Annulla</button>
+          <button class="primary-button" value="default" type="button" id="copyPeriodButton">Copia</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="notificationDialog" class="shift-dialog wide-dialog">
+      <form method="dialog" id="notificationForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Avvisi</p>
+            <h2>Messaggi dipendenti</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeNotificationDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="notification-panel">
+          <div class="copy-mode">
+            <label>
+              <input type="radio" name="notificationScope" value="week" checked>
+              <span>Settimana intera</span>
+            </label>
+            <label>
+              <input type="radio" name="notificationScope" value="day">
+              <span>Singolo giorno</span>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="notification-day-field hidden">
+              <span>Giorno da avvisare</span>
+              <select id="notificationDay"></select>
+            </label>
+            <label>
+              <span>Intestazione messaggio</span>
+              <input id="notificationIntro" type="text" value="Ciao, questi sono i tuoi turni aggiornati:">
+            </label>
+          </div>
+
+          <div class="dialog-actions compact-actions">
+            <button class="ghost-button" value="cancel" type="button" id="cancelNotificationDialog">Annulla</button>
+            <button class="primary-button" value="default" type="button" id="generateNotifications">Genera messaggi</button>
+          </div>
+
+          <div class="notification-summary" id="notificationSummary">Nessun messaggio generato.</div>
+          <div class="notification-list" id="notificationList"></div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="printDialog" class="shift-dialog wide-dialog">
+      <form method="dialog" id="printForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Esportazione</p>
+            <h2>Stampa / PDF</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closePrintDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="print-panel">
+          <div class="copy-mode">
+            <label>
+              <input type="radio" name="printScope" value="week" checked>
+              <span>Settimana intera</span>
+            </label>
+            <label>
+              <input type="radio" name="printScope" value="day">
+              <span>Singolo giorno</span>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="print-day-field hidden">
+              <span>Giorno da stampare</span>
+              <select id="printDay"></select>
+            </label>
+            <label>
+              <span>Titolo</span>
+              <input id="printTitle" type="text" value="Turni Piscine Aquamore">
+            </label>
+          </div>
+
+          <div class="dialog-actions compact-actions">
+            <button class="ghost-button" value="cancel" type="button" id="cancelPrintDialog">Annulla</button>
+            <button class="ghost-button" value="default" type="button" id="refreshPrintPreview">Aggiorna anteprima</button>
+            <button class="primary-button" value="default" type="button" id="printScheduleButton">Stampa / Salva PDF</button>
+          </div>
+
+          <div class="print-preview-shell">
+            <div id="printPreview" class="print-preview"></div>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="intermittentiDialog" class="shift-dialog wide-dialog">
+      <form method="dialog" id="intermittentiForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Agenzia entrate</p>
+            <h2>Chiamate intermittenti</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeIntermittentiDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="intermittenti-panel">
+          <div class="copy-mode">
+            <label>
+              <input type="radio" name="intermittentiScope" value="week" checked>
+              <span>Settimana intera</span>
+            </label>
+            <label>
+              <input type="radio" name="intermittentiScope" value="day">
+              <span>Singolo giorno</span>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label class="intermittenti-day-field hidden">
+              <span>Giorno da includere</span>
+              <select id="intermittentiDay"></select>
+            </label>
+            <label>
+              <span>Codice fiscale datore</span>
+              <input id="intermittentiEmployerFiscalCode" type="text" placeholder="Codice fiscale azienda">
+            </label>
+            <label>
+              <span>Email invio</span>
+              <input id="intermittentiEmail" type="email" placeholder="Email aziendale">
+            </label>
+          </div>
+
+          <div class="dialog-actions compact-actions">
+            <button class="ghost-button" value="cancel" type="button" id="cancelIntermittentiDialog">Annulla</button>
+            <button class="ghost-button" value="default" type="button" id="refreshIntermittentiPreview">Aggiorna anteprima</button>
+            <button class="ghost-button" value="default" type="button" id="downloadIntermittentiCsv">Scarica CSV</button>
+            <button class="primary-button" value="default" type="button" id="downloadIntermittentiPdf">Scarica PDF</button>
+          </div>
+
+          <div class="notification-summary" id="intermittentiSummary">Nessun dato generato.</div>
+          <div class="intermittenti-preview" id="intermittentiPreview"></div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="backupDialog" class="shift-dialog">
+      <form method="dialog" id="backupForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Sicurezza dati</p>
+            <h2>Backup</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeBackupDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="backup-panel">
+          <p class="backup-note">Ogni salvataggio crea una copia automatica dei dati. Puoi ripristinare un backup se una modifica crea problemi.</p>
+          <button class="ghost-button" id="refreshBackups" type="button">Aggiorna lista</button>
+          <div class="backup-list" id="backupList"></div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="historyDialog" class="shift-dialog wide-dialog">
+      <form method="dialog" id="historyForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Registro manager</p>
+            <h2>Storico operativo</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeHistoryDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="history-panel">
+          <p class="backup-note">Tiene traccia di pubblicazioni, chiamate generate, timbrature e ripristini backup.</p>
+          <div class="attendance-tools">
+            <button class="ghost-button" id="refreshHistory" type="button">Aggiorna storico</button>
+            <button class="ghost-button" id="exportHistoryCsv" type="button">Esporta CSV</button>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="attendanceDialog" class="shift-dialog wide-dialog">
+      <form method="dialog" id="attendanceForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Timbrature</p>
+            <h2>Presenze dipendenti</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeAttendanceDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="attendance-panel">
+          <div class="attendance-tools">
+            <a class="primary-link-button" href="totem.html" target="_blank" rel="noopener">Apri totem QR</a>
+            <button class="primary-button" id="openAttendanceCorrection" type="button">Aggiungi timbratura</button>
+            <button class="ghost-button" id="refreshAttendance" type="button">Aggiorna presenze</button>
+            <button class="ghost-button" id="exportAttendanceSummaryCsv" type="button">Esporta riepilogo</button>
+            <button class="ghost-button" id="exportAttendanceDetailCsv" type="button">Esporta dettaglio</button>
+            <button class="ghost-button" id="printAttendanceSummary" type="button">Stampa riepilogo</button>
+            <button class="ghost-button" id="printAttendanceSheet" type="button">Stampa foglio</button>
+          </div>
+          <div class="attendance-filters">
+            <label>
+              <span>Periodo</span>
+              <select id="attendancePeriod">
+                <option value="today">Oggi</option>
+                <option value="week">Questa settimana</option>
+                <option value="month">Questo mese</option>
+                <option value="custom">Personalizzato</option>
+              </select>
+            </label>
+            <label>
+              <span>Mese</span>
+              <input id="attendanceMonth" type="month">
+            </label>
+            <label>
+              <span>Dipendente</span>
+              <select id="attendanceEmployeeFilter">
+                <option value="all">Tutti</option>
+              </select>
+            </label>
+            <label>
+              <span>Dal</span>
+              <input id="attendanceFrom" type="text" inputmode="numeric" placeholder="gg/mm/aaaa">
+            </label>
+            <label>
+              <span>Al</span>
+              <input id="attendanceTo" type="text" inputmode="numeric" placeholder="gg/mm/aaaa">
+            </label>
+          </div>
+          <div id="attendanceSummary" class="attendance-summary"></div>
+          <div id="attendanceMonthlySummary" class="monthly-summary"></div>
+          <div id="attendanceList" class="attendance-list"></div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="attendanceCorrectionDialog" class="shift-dialog">
+      <form method="dialog" id="attendanceCorrectionForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Presenze</p>
+            <h2 id="attendanceCorrectionTitle">Aggiungi timbratura</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeAttendanceCorrectionDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Dipendente</span>
+            <select id="attendanceCorrectionEmployee" required></select>
+          </label>
+          <label>
+            <span>Tipo</span>
+            <select id="attendanceCorrectionType" required>
+              <option value="in">Entrata</option>
+              <option value="out">Uscita</option>
+            </select>
+          </label>
+          <label>
+            <span>Data</span>
+            <input id="attendanceCorrectionDate" type="text" inputmode="numeric" placeholder="gg/mm/aaaa" required>
+          </label>
+          <label>
+            <span>Ora</span>
+            <input id="attendanceCorrectionTime" type="time" required>
+          </label>
+          <label>
+            <span>Nota</span>
+            <input id="attendanceCorrectionNote" type="text" placeholder="Es. dimenticata uscita">
+          </label>
+        </div>
+
+        <div class="dialog-actions split-actions">
+          <button class="danger-button hidden" id="deleteAttendanceCorrection" type="button">Elimina</button>
+          <span></span>
+          <button class="ghost-button" value="cancel" type="button" id="cancelAttendanceCorrectionDialog">Annulla</button>
+          <button class="primary-button" value="default" type="submit">Salva</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="qrScanDialog" class="shift-dialog">
+      <form method="dialog" id="qrScanForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Timbratura</p>
+            <h2>Scansiona QR</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeQrScanDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="qr-scan-panel">
+          <video id="qrScanVideo" muted playsinline></video>
+          <p id="qrScanStatus">Inquadra il QR del totem per registrare entrata o uscita.</p>
+          <p class="backup-note">Se la fotocamera non si apre, usa la fotocamera dell'iPhone e apri il link del QR.</p>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="companySettingsDialog" class="shift-dialog">
+      <form method="dialog" id="companySettingsForm">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Azienda</p>
+            <h2>Impostazioni</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" id="closeCompanySettingsDialog" aria-label="Chiudi">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Nome attività</span>
+            <input id="companyNameInput" type="text" placeholder="Nome del ristorante">
+          </label>
+          <label>
+            <span>Reparti</span>
+            <input id="companyRolesInput" type="text" placeholder="Reception, Bagnini, Istruttori, Pulizie, Bar">
+          </label>
+          <label>
+            <span>Luoghi di lavoro</span>
+            <input id="companyWorkplacesInput" type="text" placeholder="Piscine Aquamore, Vasca interna, Esterno, Bar">
+          </label>
+          <label>
+            <span>Codice fiscale datore</span>
+            <input id="companyEmployerFiscalCodeInput" type="text" placeholder="Codice fiscale azienda">
+          </label>
+          <label>
+            <span>Email invio chiamate</span>
+            <input id="companyAgencyEmailInput" type="email" placeholder="email@azienda.it">
+          </label>
+        </div>
+
+        <p class="backup-note">Scrivi più voci separate da virgola. Saranno disponibili nei filtri, nelle schede dipendente e nei turni.</p>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" value="cancel" type="button" id="cancelCompanySettingsDialog">Annulla</button>
+          <button class="primary-button" value="default" type="submit">Salva impostazioni</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

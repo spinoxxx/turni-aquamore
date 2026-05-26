@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Totem QR timbrature</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body class="totem-body">
+    <main class="totem-screen">
+      <section class="totem-panel">
+        <p class="eyebrow" id="totemCompanyName">Piscine Aquamore</p>
+        <h1>Timbratura dipendenti</h1>
+        <p class="totem-clock" id="totemClock">--:--</p>
+        <div class="qr-frame">
+          <img id="qrImage" alt="QR code per timbrare">
+        </div>
+        <div class="totem-status">
+          <strong id="totemCountdown">Aggiornamento...</strong>
+          <span>Il QR cambia ogni 30 secondi</span>
+        </div>
+        <p class="totem-code">Codice: <strong id="totemCode">------</strong></p>
+      </section>
+    </main>
+
+    <script>
+      const qrImage = document.querySelector("#qrImage");
+      const totemCountdown = document.querySelector("#totemCountdown");
+      const totemCode = document.querySelector("#totemCode");
+      const totemClock = document.querySelector("#totemClock");
+      const totemCompanyName = document.querySelector("#totemCompanyName");
+      let expiresAt = 0;
+
+      function updateClock() {
+        totemClock.textContent = new Date().toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+      }
+
+      async function loadToken() {
+        const response = await fetch("/api/totem/token", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Apri il totem da un account manager");
+        }
+        const payload = await response.json();
+        expiresAt = new Date(payload.expiresAt).getTime();
+        totemCompanyName.textContent = payload.companyName || "Piscine Aquamore";
+        totemCode.textContent = payload.code;
+        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=12&data=${encodeURIComponent(payload.punchUrl)}`;
+      }
+
+      async function tick() {
+        updateClock();
+        const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+        totemCountdown.textContent = remaining ? `Nuovo QR tra ${remaining}s` : "Aggiorno QR...";
+        if (!expiresAt || remaining <= 0) {
+          try {
+            await loadToken();
+          } catch (error) {
+            totemCountdown.textContent = error.message || "Connessione non disponibile";
+          }
+        }
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    </script>
+  </body>
+</html>
