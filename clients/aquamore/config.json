@@ -3,11 +3,11 @@
   "clientId": "aquamore",
   "displayName": "Aquamore",
   "accountType": null,
-  "plan": "turni",
+  "plan": "gestione",
   "licenseStatus": "active",
   "trialEndsAt": null,
   "billing": {
-    "monthlyPriceEur": 39,
+    "monthlyPriceEur": 69,
     "additionalLocations": null
   },
   "featureOverrides": {
@@ -22,7 +22,7 @@
   },
   "notes": [
     "Profilo predisposto per l'onboarding; nessuna configurazione operativa e stata inserita.",
-    "Piano Turni configurato al prezzo di catalogo di 39 EUR al mese.",
+    "Piano Gestione configurato al prezzo di catalogo di 69 EUR al mese.",
     "Licenza attiva; nessun periodo di prova configurato.",
     "Da definire: tipo di account.",
     "Da definire: numero di sedi ed eventuali eccezioni sui moduli.",
