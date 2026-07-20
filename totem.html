@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Totem QR Piscine Aquamore</title>
+    <title>Totem QR timbrature</title>
     <link rel="stylesheet" href="style.css">
   </head>
   <body class="totem-body">
     <main class="totem-screen">
       <section class="totem-panel">
-        <p class="eyebrow" id="totemCompanyName">Piscine Aquamore</p>
+        <p class="eyebrow" id="totemCompanyName">Bar Flora srl</p>
         <h1>Timbratura dipendenti</h1>
         <p class="totem-clock" id="totemClock">--:--</p>
         <div class="qr-frame">
@@ -42,11 +42,11 @@
       async function loadToken() {
         const response = await fetch("/api/totem/token", { cache: "no-store" });
         if (!response.ok) {
-          throw new Error("Apri il totem da un account manager");
+          throw new Error("QR non disponibile, controlla la connessione");
         }
         const payload = await response.json();
         expiresAt = new Date(payload.expiresAt).getTime();
-        totemCompanyName.textContent = payload.companyName || "Piscine Aquamore";
+        totemCompanyName.textContent = payload.companyName || "Bar Flora srl";
         totemCode.textContent = payload.code;
         qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=12&data=${encodeURIComponent(payload.punchUrl)}`;
       }

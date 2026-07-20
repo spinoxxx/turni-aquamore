@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "defaultPlan": "turni",
+  "plans": {
+    "turni": {
+      "name": "Turni",
+      "monthlyPriceEur": 39,
+      "features": [
+        "schedule",
+        "employees",
+        "employee_portal",
+        "publish_schedule",
+        "time_off_requests",
+        "copy_period",
+        "employee_messages",
+        "print_pdf",
+        "backup",
+        "settings"
+      ]
+    },
+    "gestione": {
+      "name": "Gestione",
+      "monthlyPriceEur": 69,
+      "inherits": "turni",
+      "features": [
+        "supervisor",
+        "attendance",
+        "attendance_totem",
+        "manual_attendance",
+        "attendance_import_export",
+        "push_notifications",
+        "intermittent_calls",
+        "activity_history"
+      ]
+    },
+    "controllo": {
+      "name": "Controllo",
+      "monthlyPriceEur": 99,
+      "inherits": "gestione",
+      "features": [
+        "revenue_productivity",
+        "tips",
+        "payroll_documents",
+        "employee_documents",
+        "task_module",
+        "multi_workplace",
+        "workplace_groups"
+      ]
+    }
+  }
+}
+

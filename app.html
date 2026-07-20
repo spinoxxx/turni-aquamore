@@ -11,7 +11,6 @@
       <header class="topbar">
         <div class="brand-block">
           <p class="eyebrow" id="brandCompanyName">Bar Flora srl</p>
-          <img class="brand-logo hidden" id="brandCompanyLogo" src="assets/muretto-logo.png" alt="Muretto">
           <h1>Gestione turni</h1>
         </div>
 
@@ -53,15 +52,6 @@
         <button class="ghost-button hidden" id="logoutButton" type="button">Esci</button>
       </section>
 
-      <section id="licenseBanner" class="license-banner hidden" aria-live="polite">
-        <div>
-          <span id="licenseClientName">Account</span>
-          <strong id="licensePlanName">Piano</strong>
-          <small id="licenseStatusText"></small>
-        </div>
-        <a id="licenseUpgradeLink" class="mini-action hidden" href="mailto:assistenza@turniristorante.it">Passa al piano superiore</a>
-      </section>
-
       <aside class="toolbar">
         <label class="search-field">
           <span>Cerca</span>
@@ -100,18 +90,6 @@
         <button class="ghost-button" id="openAttendance" type="button">
           Presenze
         </button>
-        <button class="ghost-button" id="openTips" type="button">
-          Mance
-        </button>
-        <button class="ghost-button" id="openPayroll" type="button">
-          Buste paga
-        </button>
-        <button class="ghost-button" id="openEmployeeDocuments" type="button">
-          Documenti
-        </button>
-        <button class="ghost-button" id="openTaskManager" type="button">
-          Mansionario
-        </button>
         <button class="ghost-button" id="openBackups" type="button">
           Backup
         </button>
@@ -141,7 +119,7 @@
             <span>PIN mancanti</span>
             <strong id="dashDefaultPins">0</strong>
           </div>
-          <div class="dashboard-card wide" id="dashBackupCard">
+          <div class="dashboard-card wide">
             <span>Ultimo backup</span>
             <strong id="dashLastBackup">Non disponibile</strong>
           </div>
@@ -185,20 +163,7 @@
           </div>
         </div>
         <div id="myRequests" class="request-list"></div>
-        <div id="myPayroll" class="payroll-employee-panel"></div>
-        <div id="myEmployeeDocuments" class="payroll-employee-panel"></div>
-        <div id="myTasks" class="task-list"></div>
       </section>
-
-        <section id="taskVerificationPanel" class="manager-requests hidden" aria-label="Verifica mansioni">
-          <div class="portal-head">
-            <div>
-              <p class="eyebrow">Mansionario</p>
-              <h2>Mansioni del giorno</h2>
-            </div>
-          </div>
-          <div id="taskVerificationList" class="task-list"></div>
-        </section>
 
         <section id="managerRequests" class="manager-requests hidden" aria-label="Richieste dipendenti">
           <div class="portal-head">
@@ -450,7 +415,7 @@
               <input id="newEmployeeIntermittent" type="checkbox">
               <span>Dipendente a chiamata</span>
             </label>
-            <label class="checkbox-field" id="employeeSupervisorField">
+            <label class="checkbox-field">
               <input id="newEmployeeSupervisor" type="checkbox">
               <span>Accesso capoturno turni del giorno</span>
             </label>
@@ -716,57 +681,11 @@
           <div class="attendance-tools">
             <a class="primary-link-button" href="totem.html" target="_blank" rel="noopener">Apri totem QR</a>
             <button class="primary-button" id="openAttendanceCorrection" type="button">Aggiungi timbratura</button>
-            <button class="ghost-button" id="toggleAttendanceImport" type="button">Importa Excel</button>
             <button class="ghost-button" id="refreshAttendance" type="button">Aggiorna presenze</button>
             <button class="ghost-button" id="exportAttendanceSummaryCsv" type="button">Esporta riepilogo</button>
             <button class="ghost-button" id="exportAttendanceDetailCsv" type="button">Esporta dettaglio</button>
             <button class="ghost-button" id="printAttendanceSummary" type="button">Stampa riepilogo</button>
             <button class="ghost-button" id="printAttendanceSheet" type="button">Stampa foglio</button>
-          </div>
-          <div id="attendanceImportPanel" class="attendance-import-panel hidden">
-            <div class="form-grid">
-              <label>
-                <span>File Excel / CSV</span>
-                <input id="attendanceImportFile" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt">
-              </label>
-              <label>
-                <span>Dipendente se il file non contiene il nome</span>
-                <select id="attendanceImportEmployee">
-                  <option value="">Leggi dal file</option>
-                </select>
-              </label>
-              <label class="full-row">
-                <span>Oppure incolla righe da Excel</span>
-                <textarea id="attendanceImportText" rows="5" placeholder="Dipendente	Data	Entrata	Uscita&#10;Sakib	15/06/2026	21:00	02:00"></textarea>
-              </label>
-            </div>
-            <div class="dialog-actions compact-actions">
-              <button class="ghost-button" id="previewAttendanceImport" type="button">Anteprima import</button>
-              <button class="primary-button" id="confirmAttendanceImport" type="button" disabled>Conferma import</button>
-            </div>
-            <div id="attendanceImportPreview" class="attendance-import-preview empty-state">Carica un file o incolla le righe, poi fai anteprima.</div>
-          </div>
-          <div class="attendance-revenue-panel" data-feature="revenue_productivity">
-            <div class="attendance-revenue-form">
-              <label>
-                <span>Giorno fatturato</span>
-                <input id="attendanceRevenueDate" type="text" inputmode="numeric" placeholder="gg/mm/aaaa">
-              </label>
-              <label>
-                <span>Luogo / gruppo</span>
-                <select id="attendanceRevenueScope"></select>
-              </label>
-              <label>
-                <span>Fatturato</span>
-                <input id="attendanceRevenueAmount" type="text" inputmode="decimal" placeholder="0,00">
-              </label>
-              <label>
-                <span>Nota</span>
-                <input id="attendanceRevenueNote" type="text" placeholder="Es. evento, pioggia, chiusura">
-              </label>
-              <button class="primary-button" id="saveAttendanceRevenue" type="button">Salva fatturato</button>
-            </div>
-            <div id="attendanceProductivity" class="attendance-productivity"></div>
           </div>
           <div class="attendance-filters">
             <label>
@@ -801,284 +720,6 @@
           <div id="attendanceSummary" class="attendance-summary"></div>
           <div id="attendanceMonthlySummary" class="monthly-summary"></div>
           <div id="attendanceList" class="attendance-list"></div>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="payrollDialog" class="shift-dialog wide-dialog">
-      <form method="dialog" id="payrollForm">
-        <div class="dialog-head">
-          <div>
-            <p class="eyebrow">Documenti riservati</p>
-            <h2>Distribuzione buste paga</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="button" id="closePayrollDialog" aria-label="Chiudi">×</button>
-        </div>
-
-        <div class="payroll-panel">
-          <div class="payroll-upload">
-            <label>
-              <span>Mese buste paga</span>
-              <input id="payrollMonth" type="month" required>
-            </label>
-            <label class="payroll-file-field">
-              <span>PDF singolo o più PDF</span>
-              <input id="payrollFiles" type="file" accept="application/pdf,.pdf" multiple>
-            </label>
-            <button class="primary-button" id="uploadPayroll" type="button">Carica e distribuisci</button>
-          </div>
-          <div class="notification-summary hidden" id="payrollNotice"></div>
-          <div class="payroll-results hidden" id="payrollResults"></div>
-          <div class="payroll-list-head">
-            <div>
-              <p class="eyebrow">Archivio</p>
-              <h3>Buste paga caricate</h3>
-            </div>
-            <label>
-              <span>Filtra mese</span>
-              <input id="payrollFilterMonth" type="month">
-            </label>
-          </div>
-          <div class="payroll-list" id="payrollList"></div>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="employeeDocumentsDialog" class="shift-dialog wide-dialog">
-      <form method="dialog" id="employeeDocumentsForm">
-        <div class="dialog-head">
-          <div>
-            <p class="eyebrow">Archivio riservato</p>
-            <h2>Documenti dipendenti</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="button" id="closeEmployeeDocumentsDialog" aria-label="Chiudi">×</button>
-        </div>
-
-        <div class="payroll-panel">
-          <div class="employee-document-upload">
-            <label>
-              <span>Dipendente</span>
-              <select id="employeeDocumentEmployee" required></select>
-            </label>
-            <label>
-              <span>Categoria</span>
-              <select id="employeeDocumentCategory" required>
-                <option value="Contratto">Contratto</option>
-                <option value="Attestato">Attestato</option>
-                <option value="Certificazione">Certificazione</option>
-                <option value="Documento">Documento</option>
-                <option value="Altro">Altro</option>
-              </select>
-            </label>
-            <label>
-              <span>Titolo</span>
-              <input id="employeeDocumentTitle" type="text" maxlength="100" placeholder="Es. Contratto di assunzione" required>
-            </label>
-            <label>
-              <span>Data rilascio</span>
-              <input id="employeeDocumentIssueDate" type="text" inputmode="numeric" placeholder="gg/mm/aaaa">
-            </label>
-            <label>
-              <span>Data scadenza</span>
-              <input id="employeeDocumentExpiryDate" type="text" inputmode="numeric" placeholder="gg/mm/aaaa">
-            </label>
-            <label class="payroll-file-field">
-              <span>File PDF, JPG o PNG</span>
-              <input id="employeeDocumentFile" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png">
-            </label>
-            <button class="primary-button" id="uploadEmployeeDocument" type="button">Carica documento</button>
-          </div>
-          <div class="notification-summary hidden" id="employeeDocumentsNotice"></div>
-          <div class="payroll-list-head">
-            <div>
-              <p class="eyebrow">Archivio</p>
-              <h3>Documenti caricati</h3>
-            </div>
-            <div class="employee-document-filters">
-              <label>
-                <span>Dipendente</span>
-                <select id="employeeDocumentFilterEmployee">
-                  <option value="all">Tutti</option>
-                </select>
-              </label>
-              <label>
-                <span>Categoria</span>
-                <select id="employeeDocumentFilterCategory">
-                  <option value="all">Tutte</option>
-                  <option value="Contratto">Contratto</option>
-                  <option value="Attestato">Attestato</option>
-                  <option value="Certificazione">Certificazione</option>
-                  <option value="Documento">Documento</option>
-                  <option value="Altro">Altro</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          <div class="payroll-list" id="employeeDocumentsList"></div>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="tipsDialog" class="shift-dialog wide-dialog">
-      <form method="dialog" id="tipsForm">
-        <div class="dialog-head">
-          <div>
-            <p class="eyebrow">Ripartizione mensile</p>
-            <h2>Mance dipendenti</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="button" id="closeTipsDialog" aria-label="Chiudi">×</button>
-        </div>
-
-        <div class="tips-panel">
-          <div class="tips-controls">
-            <label>
-              <span>Mese</span>
-              <input id="tipsMonth" type="month">
-            </label>
-            <label>
-              <span>Mance contanti</span>
-              <div class="money-input">
-                <span>€</span>
-                <input id="tipsCashTotal" type="number" min="0" step="0.01" inputmode="decimal" value="0">
-              </div>
-            </label>
-            <label>
-              <span>Mance POS</span>
-              <div class="money-input">
-                <span>€</span>
-                <input id="tipsPosTotal" type="number" min="0" step="0.01" inputmode="decimal" value="0">
-              </div>
-            </label>
-          </div>
-          <div class="tips-summary" id="tipsSummary"></div>
-          <div class="tips-table-scroll">
-            <div class="tips-table" id="tipsTable"></div>
-          </div>
-          <div class="dialog-actions">
-            <button class="ghost-button" id="resetTipsHours" type="button">Ripristina ore da presenze</button>
-            <button class="primary-button" id="saveTips" type="button">Salva prospetto</button>
-          </div>
-          <div class="notification-summary hidden" id="tipsNotice"></div>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="taskDialog" class="shift-dialog wide-dialog">
-      <form method="dialog" id="taskForm">
-        <div class="dialog-head">
-          <div>
-            <p class="eyebrow">Mansionario</p>
-            <h2>Gestisci mansioni</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="button" id="closeTaskDialog" aria-label="Chiudi">×</button>
-        </div>
-
-        <div class="task-panel">
-          <label class="checkbox-field task-module-toggle">
-            <input id="taskModuleEnabled" type="checkbox">
-            <span>Mansionario attivo</span>
-          </label>
-
-          <div class="form-grid">
-            <label>
-              <span>Titolo mansione</span>
-              <input id="taskTitleInput" type="text" placeholder="Es. Controllo banco e frigo">
-            </label>
-            <label>
-              <span>Reparto</span>
-              <select id="taskRoleInput"></select>
-            </label>
-            <label>
-              <span>Luogo</span>
-              <select id="taskWorkplaceInput"></select>
-            </label>
-            <label>
-              <span>Turno</span>
-              <select id="taskShiftTypeInput"></select>
-            </label>
-            <label>
-              <span>Assegnazione</span>
-              <select id="taskAssignmentModeInput">
-                <option value="shared">Condivisa nel turno</option>
-                <option value="single">Solo una persona</option>
-              </select>
-            </label>
-            <label>
-              <span>Dipendente assegnato</span>
-              <select id="taskAssigneeInput"></select>
-            </label>
-            <label>
-              <span>Giorno mansione</span>
-              <select id="taskDayInput"></select>
-            </label>
-            <label>
-              <span>Ora mansione</span>
-              <input id="taskTimeInput" type="text" inputmode="numeric" pattern="^([01]\d|2[0-3]):[0-5]\d$" maxlength="5" placeholder="HH:MM">
-            </label>
-            <label>
-              <span>Prova richiesta</span>
-              <select id="taskProofInput">
-                <option value="none">Nessuna</option>
-                <option value="note">Nota obbligatoria</option>
-                <option value="photo">Foto obbligatoria</option>
-              </select>
-            </label>
-            <label>
-              <span>Verificatore</span>
-              <select id="taskVerifierInput"></select>
-            </label>
-            <label class="checkbox-field">
-              <input id="taskActiveInput" type="checkbox" checked>
-              <span>Mansione attiva</span>
-            </label>
-            <label class="full-row">
-              <span>Descrizione</span>
-              <input id="taskDescriptionInput" type="text" placeholder="Dettagli operativi per il dipendente">
-            </label>
-          </div>
-
-          <div class="dialog-actions compact-actions">
-            <button class="ghost-button hidden" id="cancelTaskEdit" type="button">Annulla modifica</button>
-            <button class="ghost-button" id="generateTasksNow" type="button">Genera per settimana</button>
-            <button class="primary-button" id="saveTaskTemplate" type="button">Salva mansione</button>
-          </div>
-
-          <div class="notification-summary" id="taskSummary">Mansionario non configurato.</div>
-          <div id="taskTemplateList" class="task-list"></div>
-          <div id="taskManagerAssignments" class="task-list"></div>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="taskCompleteDialog" class="shift-dialog">
-      <form method="dialog" id="taskCompleteForm">
-        <div class="dialog-head">
-          <div>
-            <p class="eyebrow">Mansione</p>
-            <h2 id="taskCompleteTitle">Completa mansione</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="button" id="closeTaskCompleteDialog" aria-label="Chiudi">×</button>
-        </div>
-
-        <p class="backup-note" id="taskCompleteDescription"></p>
-
-        <div class="form-grid">
-          <label>
-            <span>Nota</span>
-            <input id="taskCompleteNote" type="text" placeholder="Nota opzionale o obbligatoria">
-          </label>
-          <label>
-            <span>Foto</span>
-            <input id="taskCompletePhoto" type="file" accept="image/png,image/jpeg,image/webp">
-          </label>
-        </div>
-
-        <p class="backup-note">Puoi scattare o caricare una foto normale: l'app la riduce automaticamente prima dell'invio.</p>
-        <p class="login-error hidden" id="taskCompleteError">Controlla i dati inseriti.</p>
-
-        <div class="dialog-actions">
-          <button class="ghost-button" value="cancel" type="button" id="cancelTaskCompleteDialog">Annulla</button>
-          <button class="primary-button" value="default" type="submit">Segna completata</button>
         </div>
       </form>
     </dialog>
@@ -1169,10 +810,6 @@
             <span>Luoghi di lavoro</span>
             <input id="companyWorkplacesInput" type="text" placeholder="Bar Flora srl, Dehors, Cucina">
           </label>
-          <label class="full-row" id="companyWorkplaceGroupsField">
-            <span>Gruppi statistiche</span>
-            <textarea id="companyWorkplaceGroupsInput" rows="3" placeholder="Muretto: Muretto Sala, Muretto Cucina&#10;Bar Flora: Bar Flora Sala, Bar Flora Cucina"></textarea>
-          </label>
           <label>
             <span>Codice fiscale datore</span>
             <input id="companyEmployerFiscalCodeInput" type="text" placeholder="Codice fiscale azienda">
@@ -1192,6 +829,6 @@
       </form>
     </dialog>
 
-    <script src="app.js?v=118"></script>
+    <script src="app.js"></script>
   </body>
 </html>

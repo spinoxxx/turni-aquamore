@@ -1,14 +1,22 @@
 {
-  "name": "turni-aquamore",
+  "name": "turni-ristorante",
   "version": "1.0.0",
   "private": true,
-  "description": "App Piscine Aquamore per gestione turni, dipendenti, presenze e richieste.",
+  "description": "App per gestione turni ristorante con accesso manager e dipendenti.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js"
+    "check": "node --check server.js && node --check app.js && node --check license.js",
+    "test": "node tests/license.test.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.6.205",
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.16"
   }
 }

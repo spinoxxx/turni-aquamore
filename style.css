@@ -52,6 +52,47 @@ body.auth-gated .app-shell {
   color: #a52b42;
 }
 
+.license-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 20px 12px;
+  border: 1px solid #d9e5f2;
+  border-radius: 10px;
+  background: #f4f8fc;
+  color: #31506f;
+  padding: 10px 14px;
+}
+
+.license-banner > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.license-banner span,
+.license-banner small {
+  color: var(--muted);
+}
+
+.license-banner.read-only {
+  border-color: #e7c96c;
+  background: #fff9e8;
+  color: #795f14;
+}
+
+.license-banner.blocked {
+  border-color: rgba(220, 63, 92, 0.42);
+  background: #fff1f4;
+  color: #a52b42;
+}
+
+.feature-locked {
+  display: none !important;
+}
+
 button,
 input,
 select {
@@ -89,6 +130,20 @@ button {
   font-size: 24px;
   line-height: 1.1;
   letter-spacing: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: min(180px, 42vw);
+  height: auto;
+  max-height: 50px;
+  object-fit: contain;
+  object-position: left center;
+  margin: 0 0 4px;
+}
+
+.brand-logo.hidden {
+  display: none;
 }
 
 .eyebrow,
@@ -486,10 +541,501 @@ select:focus {
   gap: 14px;
 }
 
+.tips-panel {
+  display: grid;
+  gap: 14px;
+  min-height: min-content;
+}
+
+.payroll-panel {
+  display: grid;
+  gap: 14px;
+  min-height: min-content;
+}
+
+#payrollDialog,
+#employeeDocumentsDialog {
+  height: min(860px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+}
+
+#payrollDialog form,
+#employeeDocumentsDialog form {
+  height: 100%;
+  max-height: none;
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding-right: 4px;
+}
+
+#payrollDialog .dialog-head,
+#employeeDocumentsDialog .dialog-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface);
+  padding-bottom: 12px;
+}
+
+.payroll-upload {
+  display: grid;
+  grid-template-columns: .8fr 1.5fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.employee-document-upload {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.employee-document-upload label,
+.employee-document-filters label {
+  display: grid;
+  gap: 6px;
+}
+
+.employee-document-upload label > span,
+.employee-document-filters label > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.employee-document-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.document-expiring {
+  background: #fff7e5;
+}
+
+.document-expired {
+  background: #fff1f4;
+}
+
+.document-expiring small {
+  color: #96620d;
+}
+
+.document-expired small {
+  color: #b83250;
+}
+
+.payroll-upload label,
+.payroll-list-head label {
+  display: grid;
+  gap: 6px;
+}
+
+.payroll-upload label > span,
+.payroll-list-head label > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.payroll-file-field input {
+  min-height: 42px;
+  padding: 8px;
+}
+
+.payroll-results {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.payroll-result-summary,
+.payroll-result-row,
+.payroll-result-error {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.payroll-result-summary {
+  background: #eef8f5;
+}
+
+.payroll-result-error {
+  display: block;
+  background: #fff1f4;
+  color: #b83250;
+  font-weight: 800;
+}
+
+.payroll-results > :last-child {
+  border-bottom: 0;
+}
+
+.payroll-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 14px;
+}
+
+.payroll-list-head h3,
+.portal-section-head h3 {
+  margin: 2px 0 0;
+}
+
+.payroll-list {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.payroll-row,
+.payroll-employee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.payroll-row:last-child,
+.payroll-employee-row:last-child {
+  border-bottom: 0;
+}
+
+.payroll-row strong,
+.payroll-row small,
+.payroll-employee-row strong,
+.payroll-employee-row small {
+  display: block;
+}
+
+.payroll-row small,
+.payroll-employee-row small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.payroll-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.payroll-employee-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.payroll-employee-panel:empty {
+  display: none;
+}
+
+.portal-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payroll-employee-list {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+#tipsDialog {
+  height: min(860px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+}
+
+#tipsDialog form {
+  height: 100%;
+  max-height: none;
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding-right: 4px;
+}
+
+#tipsDialog .dialog-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface);
+  padding-bottom: 12px;
+}
+
+.tips-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.tips-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.tips-controls label {
+  display: grid;
+  gap: 6px;
+}
+
+.tips-controls label > span,
+.tips-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.money-input {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.money-input > span {
+  padding-left: 12px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.money-input input {
+  border: 0;
+  min-width: 0;
+}
+
+.tips-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tips-summary div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.tips-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.tips-table {
+  min-width: 820px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tips-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) 1fr .75fr .9fr .9fr .9fr;
+}
+
+.tips-row > div {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tips-row:last-child > div {
+  border-bottom: 0;
+}
+
+.tips-row.head {
+  background: #f3f6fa;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tips-row.head > div {
+  min-height: 38px;
+}
+
+.tips-row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tips-hours-input {
+  width: 100%;
+  min-width: 90px;
+  padding: 7px 8px;
+}
+
+#attendanceDialog {
+  height: min(900px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+}
+
+#attendanceDialog form {
+  height: 100%;
+  max-height: none;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+#attendanceDialog .dialog-head {
+  margin-bottom: 14px;
+}
+
+#attendanceDialog .attendance-panel {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
+}
+
 .attendance-tools {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.attendance-import-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.attendance-import-panel textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.attendance-import-preview {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.attendance-import-summary,
+.attendance-import-row {
+  display: grid;
+  grid-template-columns: 1.2fr .9fr .9fr .5fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.attendance-import-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.attendance-import-errors {
+  border: 1px solid #f6b4c1;
+  border-radius: 8px;
+  background: #fff1f4;
+  color: #b83250;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.attendance-import-errors p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.attendance-revenue-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.attendance-revenue-form {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr 1fr 1.4fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.attendance-revenue-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.attendance-revenue-form span,
+.attendance-productivity span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.attendance-productivity {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.attendance-productivity div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.attendance-productivity strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
 }
 
 .attendance-filters {
@@ -513,7 +1059,7 @@ select:focus {
 
 .attendance-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -553,7 +1099,7 @@ select:focus {
 
 .monthly-summary-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 0.6fr 0.6fr 0.6fr;
+  grid-template-columns: minmax(180px, 1fr) 0.6fr 0.6fr 0.6fr 0.6fr 0.7fr 0.7fr;
 }
 
 .monthly-summary-row div {
@@ -580,15 +1126,30 @@ select:focus {
   background: #fff7e6;
 }
 
+.monthly-summary-row.missing,
+.attendance-sheet-row.missing {
+  background: #fff3bf;
+}
+
+.monthly-summary-row.no-work,
+.attendance-sheet-row.no-work {
+  background: #eef4f8;
+}
+
+.monthly-summary-row.pending-manual,
+.attendance-sheet-row.pending-manual {
+  background: #fff1f4;
+}
+
 .attendance-list {
   display: grid;
   gap: 8px;
-  max-height: 520px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .attendance-sheet {
-  min-width: 900px;
+  min-width: 760px;
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
@@ -598,7 +1159,7 @@ select:focus {
 .attendance-sheet-head,
 .attendance-sheet-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.4fr) 1fr 0.7fr 0.7fr 0.6fr 0.8fr 1fr;
+  grid-template-columns: minmax(130px, 1.1fr) minmax(105px, 0.8fr) 0.55fr 0.55fr 0.45fr 0.65fr minmax(120px, 0.9fr);
   gap: 0;
   align-items: center;
 }
@@ -616,7 +1177,7 @@ select:focus {
   min-height: 42px;
   display: flex;
   align-items: center;
-  padding: 9px 10px;
+  padding: 8px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -626,6 +1187,19 @@ select:focus {
 
 .attendance-sheet-row.open {
   background: #fff7e6;
+}
+
+.attendance-status-cell {
+  display: grid !important;
+  gap: 4px;
+  align-content: center;
+  align-items: center;
+}
+
+.attendance-status-cell small {
+  color: #8a620d;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .attendance-sheet-row span {
@@ -644,6 +1218,24 @@ select:focus {
   color: #8a620d;
 }
 
+.attendance-sheet-row.missing span {
+  border-color: rgba(216, 166, 42, 0.55);
+  background: rgba(216, 166, 42, 0.24);
+  color: #7a4e00;
+}
+
+.attendance-sheet-row.no-work span {
+  border-color: rgba(108, 128, 150, 0.35);
+  background: rgba(108, 128, 150, 0.12);
+  color: var(--muted);
+}
+
+.attendance-sheet-row.pending-manual span {
+  border-color: rgba(220, 63, 92, 0.42);
+  background: rgba(220, 63, 92, 0.13);
+  color: var(--danger);
+}
+
 .attendance-actions {
   display: flex;
   gap: 6px;
@@ -658,6 +1250,11 @@ select:focus {
   padding: 6px 8px;
   font-size: 11px;
   font-weight: 900;
+}
+
+.danger-mini-action {
+  border-color: rgba(220, 63, 92, 0.32);
+  color: var(--danger);
 }
 
 .attendance-row {
@@ -760,6 +1357,11 @@ select:focus {
   font-size: 12px;
 }
 
+.request-created-at {
+  color: #516176 !important;
+  font-weight: 900;
+}
+
 .request-pending {
   border-left: 4px solid #d8a62a;
 }
@@ -774,6 +1376,7 @@ select:focus {
 
 .request-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1113,6 +1716,56 @@ select:focus {
   grid-template-rows: 42px 1fr;
 }
 
+.workplace-day-view {
+  grid-template-rows: 42px;
+  align-items: start;
+}
+
+.day-workplace-section {
+  grid-column: 1 / -1;
+  border-bottom: 2px solid var(--line);
+  background: #fff;
+}
+
+.day-workplace-section-title {
+  position: sticky;
+  top: 42px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.day-workplace-section-title small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.workplace-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(175px, 1fr));
+}
+
+.workplace-week-grid .day-column {
+  min-height: 118px;
+}
+
+.compact-empty {
+  padding: 10px 6px;
+  font-size: 12px;
+}
+
+.request-day-section .day-workplace-section-title {
+  background: #fff8e8;
+}
+
 .day-column {
   min-height: calc(100vh - 180px);
   padding: 6px;
@@ -1129,6 +1782,42 @@ select:focus {
   margin-bottom: 6px;
 }
 
+.workplace-day-group {
+  margin-bottom: 10px;
+}
+
+.workplace-day-title {
+  position: sticky;
+  top: 42px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.workplace-day-title small {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef3f8;
+  color: var(--muted);
+  text-align: center;
+}
+
+.request-day-group .workplace-day-title {
+  background: #fff8e8;
+}
+
 .day-empty {
   color: var(--muted);
   padding: 16px 8px;
@@ -1137,6 +1826,7 @@ select:focus {
 
 .shift-dialog {
   width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0;
@@ -1154,6 +1844,8 @@ select:focus {
 
 .shift-dialog form {
   padding: 20px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
 }
 
 .dialog-head {
@@ -1468,6 +2160,101 @@ select:focus {
   gap: 10px;
   max-height: 420px;
   overflow: auto;
+}
+
+.task-panel,
+.task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.task-module-toggle {
+  align-items: center;
+  background: #eef6ff;
+  border: 1px solid #c9ddf4;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.task-section-title {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-weight: 900;
+  justify-content: space-between;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.task-section-title span,
+.task-section-title small {
+  font-size: 13px;
+}
+
+.task-card {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.task-card strong,
+.task-card span,
+.task-card small {
+  display: block;
+}
+
+.task-card strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.task-card span,
+.task-card small {
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.task-card.task-done {
+  background: #f3f8ff;
+  border-color: #b9d5f6;
+}
+
+.task-card.task-verified {
+  background: #eef9f3;
+  border-color: #bfe6cc;
+}
+
+.task-card.task-rejected {
+  background: #fff4f0;
+  border-color: #f3c3b2;
+}
+
+.task-card-actions {
+  align-items: flex-end;
+  display: grid;
+  gap: 7px;
+  justify-items: end;
+  min-width: 132px;
+}
+
+.task-status {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 4px 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.full-row {
+  grid-column: 1 / -1;
 }
 
 .notification-row {
@@ -1862,6 +2649,35 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
+  .tips-controls,
+  .tips-summary,
+  .payroll-upload,
+  .employee-document-upload {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-document-filters {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .payroll-list-head,
+  .payroll-row,
+  .payroll-employee-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payroll-row-actions {
+    width: 100%;
+  }
+
+  .payroll-row-actions > *,
+  .payroll-employee-row .primary-link-button {
+    flex: 1;
+    text-align: center;
+  }
+
   .stats-strip {
     grid-template-columns: 1fr;
   }
@@ -1876,6 +2692,16 @@ select:focus {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  #attendanceDialog {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  #attendanceDialog form {
+    padding: 14px;
   }
 
   .portal-head {
@@ -1916,7 +2742,9 @@ select:focus {
   }
 
   .attendance-filters,
-  .attendance-summary {
+  .attendance-summary,
+  .attendance-revenue-form,
+  .attendance-productivity {
     grid-template-columns: 1fr;
   }
 
@@ -1994,7 +2822,7 @@ select:focus {
   }
 
   body.printing-attendance-summary .monthly-summary-row {
-    grid-template-columns: 1.5fr 0.7fr 0.7fr 0.7fr;
+    grid-template-columns: 1.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.8fr 0.8fr;
   }
 
   #printPreview,
@@ -2055,4 +2883,106 @@ select:focus {
 .request-card-inline.request-rejected {
   border-color: rgba(220, 63, 92, 0.55);
   background: #fff3f5;
+}
+
+.inline-delete-request {
+  margin-top: 6px;
+  padding: 5px 7px;
+  border: 1px solid rgba(220, 63, 92, 0.32);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.manual-attendance-body {
+  min-height: 100vh;
+  background: #f3f6fa;
+}
+
+.manual-attendance-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.manual-attendance-card {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: clamp(18px, 5vw, 32px);
+  box-shadow: var(--shadow);
+}
+
+.manual-attendance-card h1 {
+  margin: 0;
+  font-size: clamp(30px, 7vw, 42px);
+  line-height: 1;
+}
+
+.muted-copy {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.manual-attendance-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.manual-attendance-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.manual-attendance-form span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.manual-note {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(216, 166, 42, 0.35);
+  border-radius: 8px;
+  background: #fff7e6;
+  color: #8a620d;
+  padding: 10px 12px;
+  font-weight: 900;
+}
+
+.manual-status {
+  border: 1px solid rgba(105, 190, 167, 0.45);
+  border-radius: 8px;
+  background: #f0fbf8;
+  color: #266a5d;
+  padding: 12px;
+  font-weight: 900;
+}
+
+.manual-status.error {
+  border-color: rgba(220, 63, 92, 0.42);
+  background: #fff1f4;
+  color: var(--danger);
+}
+
+.ghost-link {
+  color: var(--muted);
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .manual-attendance-form {
+    grid-template-columns: 1fr;
+  }
 }

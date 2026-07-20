@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "clientId": "aquamore",
+  "displayName": "Aquamore",
+  "accountType": null,
+  "plan": "turni",
+  "licenseStatus": "active",
+  "trialEndsAt": null,
+  "billing": {
+    "monthlyPriceEur": 39,
+    "additionalLocations": null
+  },
+  "featureOverrides": {
+    "enabled": [],
+    "disabled": []
+  },
+  "workplaces": [],
+  "deployment": {
+    "provider": null,
+    "serviceName": null,
+    "publicUrl": null
+  },
+  "notes": [
+    "Profilo predisposto per l'onboarding; nessuna configurazione operativa e stata inserita.",
+    "Piano Turni configurato al prezzo di catalogo di 39 EUR al mese.",
+    "Licenza attiva; nessun periodo di prova configurato.",
+    "Da definire: tipo di account.",
+    "Da definire: numero di sedi, eventuali eccezioni sui moduli e riferimenti di deployment non segreti."
+  ]
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Richiesta timbratura manuale</title>
+    <link rel="stylesheet" href="style.css?v=113">
+  </head>
+  <body class="manual-attendance-body">
+    <main class="manual-attendance-page">
+      <section class="manual-attendance-card">
+        <p class="eyebrow">Bar Flora</p>
+        <h1>Timbratura manuale</h1>
+        <p class="muted-copy">Usa questa pagina solo se hai dimenticato una timbratura o hai sbagliato orario.</p>
+
+        <form id="manualAttendanceForm" class="manual-attendance-form">
+          <label>
+            <span>Dipendente</span>
+            <select id="manualEmployee" required></select>
+          </label>
+          <label>
+            <span>PIN</span>
+            <input id="manualPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Il tuo PIN" required>
+          </label>
+          <label>
+            <span>Data</span>
+            <input id="manualDate" type="text" inputmode="numeric" autocomplete="off" placeholder="gg/mm/aaaa" required>
+          </label>
+          <label>
+            <span>Ora inizio</span>
+            <input id="manualStart" type="text" inputmode="numeric" autocomplete="off" placeholder="08:30" required>
+          </label>
+          <label>
+            <span>Ora fine</span>
+            <input id="manualEnd" type="text" inputmode="numeric" autocomplete="off" placeholder="17:00" required>
+          </label>
+          <label class="full-row">
+            <span>Nota</span>
+            <input id="manualNote" type="text" placeholder="Es. dimenticata uscita">
+          </label>
+          <div id="manualOvernightNotice" class="manual-note hidden">La fine turno sara calcolata nel giorno successivo.</div>
+          <button id="manualSubmit" class="primary-button full-row" type="submit">Invia richiesta</button>
+        </form>
+
+        <div id="manualStatus" class="manual-status hidden"></div>
+        <a class="ghost-link" href="/">Torna all'app turni</a>
+      </section>
+    </main>
+    <script src="manual-attendance.js?v=113"></script>
+  </body>
+</html>

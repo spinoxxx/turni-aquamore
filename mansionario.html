@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mansionario</title>
+    <link rel="stylesheet" href="mansionario.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p id="companyName">Mansionario</p>
+        <h1>Mansioni operative</h1>
+      </div>
+      <nav>
+        <a class="ghost" href="/">Turni</a>
+        <button id="logoutButton" class="ghost hidden" type="button">Esci</button>
+      </nav>
+    </header>
+
+    <main>
+      <form id="loginForm" class="panel">
+        <h2>Accesso</h2>
+        <div class="grid">
+          <label>
+            <span>Tipo account</span>
+            <select id="loginRole">
+              <option value="manager">Manager</option>
+              <option value="employee" selected>Dipendente</option>
+              <option value="supervisor">Capoturno</option>
+            </select>
+          </label>
+          <label id="loginEmployeeWrap">
+            <span>Dipendente</span>
+            <select id="loginEmployee"></select>
+          </label>
+          <label>
+            <span>Password / PIN</span>
+            <input id="loginPassword" type="password" autocomplete="current-password">
+          </label>
+        </div>
+        <button id="loginButton" class="primary" type="submit">Entra</button>
+        <p id="loginError" class="error hidden"></p>
+      </form>
+
+      <section id="managerPanel" class="panel hidden">
+        <div class="section-head">
+          <div>
+            <p>Manager</p>
+            <h2>Mansioni ricorrenti</h2>
+          </div>
+          <div class="actions">
+            <button id="enableModuleButton" class="ghost" type="button">Attiva mansionario</button>
+            <button id="generateButton" class="primary" type="button">Genera settimana</button>
+          </div>
+        </div>
+
+        <p class="info-note">Crea qui le mansioni una sola volta: restano ricorrenti e vengono applicate ogni settimana ai turni che rispettano giorno, luogo, reparto e tipo turno.</p>
+
+        <div class="week-tools" aria-label="Settimana mansionario">
+          <button id="previousWeekButton" class="ghost" type="button">‹</button>
+          <div>
+            <span>Settimana</span>
+            <strong id="weekLabel">-</strong>
+          </div>
+          <button id="nextWeekButton" class="ghost" type="button">›</button>
+        </div>
+
+        <div class="grid">
+          <label>
+            <span>Titolo</span>
+            <input id="taskTitle" placeholder="Es. Controllo banco">
+          </label>
+          <label>
+            <span>Reparto</span>
+            <select id="taskRole"></select>
+          </label>
+          <label>
+            <span>Luogo</span>
+            <select id="taskWorkplace"></select>
+          </label>
+          <label>
+            <span>Turno</span>
+            <select id="taskShiftType"></select>
+          </label>
+          <label>
+            <span>Assegnazione</span>
+            <select id="taskAssignmentMode">
+              <option value="shared">Condivisa nel turno</option>
+              <option value="single">Solo una persona</option>
+            </select>
+          </label>
+          <label>
+            <span>Dipendente assegnato</span>
+            <select id="taskAssignee"></select>
+          </label>
+          <label>
+            <span>Giorno</span>
+            <select id="taskDay"></select>
+          </label>
+          <label>
+            <span>Ora</span>
+            <input id="taskTime" placeholder="HH:MM" inputmode="numeric" maxlength="5">
+          </label>
+          <label>
+            <span>Verificatore</span>
+            <select id="taskVerifier"></select>
+          </label>
+          <label>
+            <span>Prova richiesta</span>
+            <select id="taskProof">
+              <option value="none">Nessuna</option>
+              <option value="note">Nota obbligatoria</option>
+              <option value="photo">Foto obbligatoria</option>
+            </select>
+          </label>
+          <label class="wide">
+            <span>Descrizione</span>
+            <input id="taskDescription" placeholder="Dettagli operativi">
+          </label>
+        </div>
+        <div class="actions">
+          <button id="cancelTemplateEdit" class="ghost hidden" type="button">Annulla modifica</button>
+          <button id="saveTemplate" class="primary" type="button">Salva ricorrenza</button>
+        </div>
+        <div id="templateList" class="list"></div>
+      </section>
+
+      <section id="tasksPanel" class="panel hidden">
+        <div class="section-head">
+          <div>
+            <p id="taskPanelEyebrow">Oggi</p>
+            <h2 id="taskPanelTitle">Mansioni</h2>
+          </div>
+        </div>
+        <div id="assignmentList" class="list"></div>
+      </section>
+    </main>
+
+    <dialog id="completeDialog">
+      <form method="dialog">
+        <h2 id="completeTitle">Completa mansione</h2>
+        <p id="completeDescription"></p>
+        <label>
+          <span>Nota</span>
+          <input id="completeNote">
+        </label>
+        <label>
+          <span>Foto</span>
+          <input id="completePhoto" type="file" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <p class="hint">Puoi caricare una foto normale: viene ridotta automaticamente.</p>
+        <p id="completeError" class="error hidden"></p>
+        <div class="actions">
+          <button id="cancelComplete" class="ghost" type="button">Annulla</button>
+          <button id="submitComplete" class="primary" type="submit">Completa</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="mansionario.js?v=106"></script>
+  </body>
+</html>
