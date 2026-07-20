@@ -10,9 +10,20 @@ Nel servizio di hosting imposta queste variabili:
 NODE_ENV=production
 MANAGER_PASSWORD=una-password-lunga-e-unica
 DATA_DIR=/var/data
+CLIENT_ID=bar-flora-muretto
 ```
 
+Per ogni deployment cliente separato dal servizio principale aggiungi anche:
+
+```bash
+LICENSE_CONTROL_URL=https://turni-ristorante.onrender.com
+```
+
+Il servizio aggiorna automaticamente piano e stato licenza dall'autorita centrale e conserva l'ultimo stato valido nel disco persistente. Non inserire token o password nei file cliente.
+
 `DATA_DIR` deve essere una cartella privata e persistente. Li dentro l'app salva `restaurant-data.json` e i backup automatici.
+
+`CLIENT_ID` seleziona piano e licenza dal relativo file `clients/<clientId>/config.json`. Per Aquamore usare `CLIENT_ID=aquamore`. Un identificatore mancante o non valido impedisce l'avvio, evitando di pubblicare un cliente con il piano sbagliato.
 
 Alla prima partenza online l'app copia `seed-data.json` nella cartella dati privata. Il seed e dimostrativo e non contiene PIN leggibili: il manager deve impostare i PIN reali dalle schede dipendente.
 
@@ -43,6 +54,9 @@ Il server gia blocca questi file dal browser:
 - `versions`
 - `server.js`
 - `package.json`
+- `clients`
+- `plans`
+- `license.js`
 
 Nel repository GitHub per Render lascia fuori `restaurant-data.json`, `backups` e `versions`: sono esclusi da `.gitignore`.
 

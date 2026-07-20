@@ -41,13 +41,30 @@ function safeClientId(value) {
   return clientId;
 }
 
-function loadLicenseContext({ root, env = process.env, now = new Date() }) {
+function mergeClientConfig(config, override = {}) {
+  return {
+    ...config,
+    ...override,
+    clientId: config.clientId,
+    billing: {
+      ...(config.billing || {}),
+      ...(override.billing || {})
+    },
+    featureOverrides: {
+      ...(config.featureOverrides || {}),
+      ...(override.featureOverrides || {})
+    }
+  };
+}
+
+function loadLicenseContext({ root, env = process.env, now = new Date(), configOverride = {} }) {
   const catalog = readJson(path.join(root, "plans", "features.json"));
   const clientId = safeClientId(env.CLIENT_ID || DEFAULT_CLIENT_ID);
   const configPath = path.join(root, "clients", clientId, "config.json");
   if (!fs.existsSync(configPath)) throw new Error(`Configurazione cliente non trovata: ${clientId}`);
-  const config = readJson(configPath);
-  if (config.clientId !== clientId) throw new Error(`clientId non coerente in ${configPath}`);
+  const baseConfig = readJson(configPath);
+  if (baseConfig.clientId !== clientId) throw new Error(`clientId non coerente in ${configPath}`);
+  const config = mergeClientConfig(baseConfig, configOverride);
   const planCode = config.plan || catalog.defaultPlan;
   const plan = catalog.plans?.[planCode];
   if (!plan) throw new Error(`Piano licenza non riconosciuto: ${planCode}`);
@@ -120,5 +137,6 @@ module.exports = {
   inheritedFeatures,
   isProtectedMutation,
   licenseAccess,
-  loadLicenseContext
+  loadLicenseContext,
+  mergeClientConfig
 };

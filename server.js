@@ -61,7 +61,72 @@ const maxPayrollPdfBytes = 15_000_000;
 const maxEmployeeDocumentBytes = 10_000_000;
 const maxJsonPayloadBytes = 22_000_000;
 const appTimeZone = "Europe/Rome";
-const licenseContext = loadLicenseContext({ root, env: process.env });
+const licenseOverridesPath = path.join(dataDir, "license-overrides.json");
+const licenseCachePath = path.join(dataDir, "license-cache.json");
+const licenseControlUrl = String(process.env.LICENSE_CONTROL_URL || "").trim().replace(/\/+$/, "");
+const licenseRefreshIntervalMs = Math.max(5_000, Number(process.env.LICENSE_REFRESH_INTERVAL_MS) || 15_000);
+let licenseContext = loadLicenseContext({ root, env: process.env });
+let licenseRefreshPromise = null;
+let lastLicenseRefreshAt = 0;
+
+function readOptionalJson(filePath, fallback = {}) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJsonAtomic(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tempPath = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(value, null, 2)}\n`);
+  fs.renameSync(tempPath, filePath);
+}
+
+function applyLicenseOverride(configOverride) {
+  licenseContext = loadLicenseContext({ root, env: process.env, configOverride });
+}
+
+function loadCachedLicenseOverride() {
+  const cached = readOptionalJson(licenseCachePath, null);
+  if (cached?.clientId === licenseContext.clientId && cached.config) {
+    applyLicenseOverride(cached.config);
+  }
+}
+
+async function refreshRemoteLicense({ force = false } = {}) {
+  if (!licenseControlUrl) return licenseContext;
+  const now = Date.now();
+  if (!force && now - lastLicenseRefreshAt < licenseRefreshIntervalMs) return licenseContext;
+  if (licenseRefreshPromise) return licenseRefreshPromise;
+  licenseRefreshPromise = (async () => {
+    try {
+      const response = await fetch(`${licenseControlUrl}/api/license-status/${encodeURIComponent(licenseContext.clientId)}`, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(4_000)
+      });
+      if (!response.ok) throw new Error(`License authority HTTP ${response.status}`);
+      const payload = await response.json();
+      if (payload.clientId !== licenseContext.clientId || !payload.config) throw new Error("Risposta licenza non valida");
+      applyLicenseOverride(payload.config);
+      writeJsonAtomic(licenseCachePath, {
+        clientId: licenseContext.clientId,
+        config: payload.config,
+        updatedAt: new Date().toISOString()
+      });
+      lastLicenseRefreshAt = Date.now();
+    } catch (error) {
+      console.error(`Sincronizzazione licenza non riuscita: ${error.message}`);
+    } finally {
+      licenseRefreshPromise = null;
+    }
+    return licenseContext;
+  })();
+  return licenseRefreshPromise;
+}
+
+loadCachedLicenseOverride();
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -181,7 +246,7 @@ function activeTotemToken(req) {
     token,
     code: token.split(".")[1].slice(0, 6).toUpperCase(),
     expiresAt: new Date((windowId + 1) * qrWindowMs).toISOString(),
-    punchUrl: `${origin}/?punch=${encodeURIComponent(token)}`
+    punchUrl: `${origin}/app.html?punch=${encodeURIComponent(token)}`
   };
 }
 
@@ -210,12 +275,19 @@ function readState() {
   return normalizeState(data.state || data);
 }
 
+function readDemoState() {
+  const demoPath = fs.existsSync(seedDbPath) ? seedDbPath : legacyDbPath;
+  if (!fs.existsSync(demoPath)) return normalizeState({});
+  const data = JSON.parse(fs.readFileSync(demoPath, "utf8"));
+  return normalizeState(data.state || data);
+}
+
 function normalizeState(state) {
   if (!state) return state;
   const companySettings = {
-    companyName: state.companySettings?.companyName || "Bar Flora srl",
+    companyName: state.companySettings?.companyName || "Ristorante Demo",
     roles: Array.isArray(state.companySettings?.roles) && state.companySettings.roles.length ? state.companySettings.roles : ["Sala", "Cucina", "Bar"],
-    workplaces: Array.isArray(state.companySettings?.workplaces) && state.companySettings.workplaces.length ? state.companySettings.workplaces : ["Bar Flora srl"],
+    workplaces: Array.isArray(state.companySettings?.workplaces) && state.companySettings.workplaces.length ? state.companySettings.workplaces : ["Ristorante Demo"],
     workplaceGroups: Array.isArray(state.companySettings?.workplaceGroups)
       ? state.companySettings.workplaceGroups
         .map((group) => ({
@@ -925,7 +997,7 @@ function requestShiftFromApproval(state, request, day = request.day) {
   const presets = defaultShiftPresets(state);
   const effectiveType = request.type === "Mezza giornata" ? "Giorno di riposo" : request.type;
   const preset = presets[effectiveType] || presets["Giorno di riposo"] || { color: "#f1f1f3", category: "rest" };
-  const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Bar Flora srl";
+  const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Ristorante Demo";
   return {
     id: `s${Date.now()}-${crypto.randomBytes(6).toString("hex")}`,
     employeeId: request.employeeId,
@@ -1231,6 +1303,164 @@ function leadsCsv(leads) {
   ].join("\n");
 }
 
+function readPlanCatalog() {
+  return JSON.parse(fs.readFileSync(path.join(root, "plans", "features.json"), "utf8"));
+}
+
+function listPlanOptions(catalog = readPlanCatalog()) {
+  return Object.entries(catalog.plans || {}).map(([code, plan]) => ({
+    code,
+    name: plan.name || code,
+    monthlyPriceEur: Number(plan.monthlyPriceEur) || 0
+  }));
+}
+
+function readLicenseOverrides() {
+  const value = readOptionalJson(licenseOverridesPath, {});
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function readEffectiveClientConfig(clientId) {
+  const configPath = path.join(root, "clients", clientId, "config.json");
+  if (!fs.existsSync(configPath)) return null;
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  const override = readLicenseOverrides()[clientId] || {};
+  return {
+    ...config,
+    ...override,
+    clientId: config.clientId,
+    billing: {
+      ...(config.billing || {}),
+      ...(override.billing || {})
+    },
+    featureOverrides: {
+      ...(config.featureOverrides || {}),
+      ...(override.featureOverrides || {})
+    }
+  };
+}
+
+function listClientLicenseSummaries() {
+  const catalog = readPlanCatalog();
+  const clientsDir = path.join(root, "clients");
+  if (!fs.existsSync(clientsDir)) return [];
+  return fs.readdirSync(clientsDir)
+    .filter((clientId) => !clientId.startsWith("_"))
+    .map((clientId) => {
+      const configPath = path.join(clientsDir, clientId, "config.json");
+      if (!fs.existsSync(configPath)) return null;
+      const config = readEffectiveClientConfig(clientId);
+      const planCode = config.plan || catalog.defaultPlan;
+      const plan = catalog.plans?.[planCode] || {};
+      const billing = config.billing || {};
+      return {
+        clientId: config.clientId || clientId,
+        displayName: config.displayName || config.clientId || clientId,
+        accountType: config.accountType || null,
+        planCode,
+        planName: plan.name || planCode,
+        licenseStatus: config.licenseStatus || "suspended",
+        activatedAt: config.activatedAt || config.licenseStartedAt || billing.activatedAt || null,
+        trialStartedAt: config.trialStartedAt || billing.trialStartedAt || null,
+        trialEndsAt: config.trialEndsAt || null,
+        nextRenewalAt: config.nextRenewalAt || billing.nextRenewalAt || null,
+        billingPeriod: billing.period || "monthly",
+        monthlyPriceEur: Number.isFinite(Number(billing.monthlyPriceEur))
+          ? Number(billing.monthlyPriceEur)
+          : Number(plan.monthlyPriceEur) || 0,
+        additionalLocations: billing.additionalLocations ?? null,
+        internalAccount: Boolean(billing.internalAccount),
+        deployment: {
+          provider: config.deployment?.provider || null,
+          serviceName: config.deployment?.serviceName || null,
+          publicUrl: config.deployment?.publicUrl || null
+        },
+        notesCount: Array.isArray(config.notes) ? config.notes.length : 0
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, "it"));
+}
+
+function safeAdminClientId(value) {
+  const clientId = String(value || "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(clientId) || clientId.startsWith("_")) return null;
+  return clientId;
+}
+
+function nullableIsoDate(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return undefined;
+  const date = new Date(`${text}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return text;
+}
+
+function nullableNumber(value, minimum = 0) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < minimum) return undefined;
+  return number;
+}
+
+function updateClientLicenseConfig(clientId, patch) {
+  const safeClientId = safeAdminClientId(clientId);
+  if (!safeClientId) return { error: "Cliente non valido" };
+  const catalog = readPlanCatalog();
+  const configPath = path.join(root, "clients", safeClientId, "config.json");
+  if (!fs.existsSync(configPath)) return { error: "Configurazione cliente non trovata" };
+  const config = readEffectiveClientConfig(safeClientId);
+  if (config.clientId !== safeClientId) return { error: "clientId non coerente nel config" };
+
+  const nextPlan = String(patch.plan || config.plan || "").trim();
+  if (!catalog.plans?.[nextPlan]) return { error: "Piano non valido" };
+  const nextStatus = String(patch.licenseStatus || config.licenseStatus || "").trim();
+  if (!["trial", "active", "past_due", "suspended"].includes(nextStatus)) return { error: "Stato licenza non valido" };
+
+  const activatedAt = nullableIsoDate(patch.activatedAt);
+  const trialStartedAt = nullableIsoDate(patch.trialStartedAt);
+  const trialEndsAt = nullableIsoDate(patch.trialEndsAt);
+  const nextRenewalAt = nullableIsoDate(patch.nextRenewalAt);
+  if ([activatedAt, trialStartedAt, trialEndsAt, nextRenewalAt].includes(undefined)) {
+    return { error: "Usa date in formato AAAA-MM-GG oppure lascia vuoto" };
+  }
+
+  const monthlyPriceEur = nullableNumber(patch.monthlyPriceEur, 0);
+  const additionalLocations = nullableNumber(patch.additionalLocations, 0);
+  if (monthlyPriceEur === undefined || additionalLocations === undefined) {
+    return { error: "Prezzo e sedi extra devono essere numeri validi" };
+  }
+
+  config.plan = nextPlan;
+  config.licenseStatus = nextStatus;
+  config.activatedAt = activatedAt;
+  config.trialStartedAt = trialStartedAt;
+  config.trialEndsAt = trialEndsAt;
+  config.nextRenewalAt = nextRenewalAt;
+  config.billing = {
+    ...(config.billing || {}),
+    monthlyPriceEur,
+    additionalLocations
+  };
+
+  const overrides = readLicenseOverrides();
+  overrides[safeClientId] = {
+    ...(overrides[safeClientId] || {}),
+    plan: config.plan,
+    licenseStatus: config.licenseStatus,
+    activatedAt: config.activatedAt,
+    trialStartedAt: config.trialStartedAt,
+    trialEndsAt: config.trialEndsAt,
+    nextRenewalAt: config.nextRenewalAt,
+    billing: config.billing,
+    updatedAt: new Date().toISOString()
+  };
+  writeJsonAtomic(licenseOverridesPath, overrides);
+  if (safeClientId === licenseContext.clientId) applyLicenseOverride(config);
+  return { config };
+}
+
 let pdfJsPromise = null;
 
 function payrollFiscalCode(value) {
@@ -1384,6 +1614,7 @@ function serveStatic(req, res) {
     relativePath === "seed-data.json" ||
     relativePath === "server.js" ||
     relativePath === "package.json" ||
+    relativePath === path.join("assets", "muretto-logo.png") ||
     relativePath.endsWith(".md") ||
     relativePath.startsWith("anteprima-turni") ||
     relativePath.startsWith(`backups${path.sep}`) ||
@@ -1424,6 +1655,30 @@ const server = http.createServer(async (req, res) => {
         storage: fs.existsSync(dbPath) ? "ready" : "empty"
       });
       return;
+    }
+
+    const publicLicenseMatch = url.pathname.match(/^\/api\/license-status\/([a-z0-9][a-z0-9-]{0,79})$/);
+    if (publicLicenseMatch && req.method === "GET") {
+      const clientId = safeAdminClientId(publicLicenseMatch[1]);
+      const config = clientId ? readEffectiveClientConfig(clientId) : null;
+      if (!config) {
+        sendJson(res, 404, { error: "Licenza cliente non trovata" }, { "Cache-Control": "no-store" });
+        return;
+      }
+      sendJson(res, 200, {
+        clientId,
+        config: {
+          plan: config.plan,
+          licenseStatus: config.licenseStatus,
+          trialEndsAt: config.trialEndsAt || null,
+          featureOverrides: config.featureOverrides || { enabled: [], disabled: [] }
+        }
+      }, { "Cache-Control": "no-store" });
+      return;
+    }
+
+    if (licenseControlUrl && url.pathname.startsWith("/api/")) {
+      await refreshRemoteLicense();
     }
 
     if (url.pathname === "/api/capabilities" && req.method === "GET") {
@@ -1468,6 +1723,13 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/session" && req.method === "GET") {
       const user = currentUser(req);
       sendJson(res, 200, { authenticated: Boolean(user), user });
+      return;
+    }
+
+    if (url.pathname === "/api/demo-state" && req.method === "GET") {
+      sendJson(res, 200, {
+        state: stateForUser(readDemoState(), { role: "manager" })
+      }, { "Cache-Control": "no-store" });
       return;
     }
 
@@ -1521,6 +1783,34 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/admin/licenses" && req.method === "GET") {
+      const user = managerOnly(req, res);
+      if (!user) return;
+      const catalog = readPlanCatalog();
+      sendJson(res, 200, {
+        clients: listClientLicenseSummaries(),
+        plans: listPlanOptions(catalog)
+      }, { "Cache-Control": "no-store" });
+      return;
+    }
+
+    const adminLicenseMatch = url.pathname.match(/^\/api\/admin\/licenses\/([a-z0-9][a-z0-9-]{0,79})$/);
+    if (adminLicenseMatch && req.method === "PATCH") {
+      const user = managerOnly(req, res);
+      if (!user) return;
+      const body = await readBody(req);
+      const result = updateClientLicenseConfig(adminLicenseMatch[1], body);
+      if (result.error) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+      sendJson(res, 200, {
+        ok: true,
+        clients: listClientLicenseSummaries()
+      }, { "Cache-Control": "no-store" });
+      return;
+    }
+
     if (url.pathname === "/api/login/employees" && req.method === "GET") {
       const state = readState();
       sendJson(res, 200, {
@@ -1533,7 +1823,7 @@ const server = http.createServer(async (req, res) => {
       const state = readState();
       sendJson(res, 200, {
         ...activeTotemToken(req),
-        companyName: state?.companySettings?.companyName || "Bar Flora srl"
+        companyName: state?.companySettings?.companyName || "Ristorante Demo"
       }, {
         "Cache-Control": "no-store"
       });
@@ -2164,7 +2454,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const result = await mutateState((state) => {
-        const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Bar Flora srl";
+        const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Ristorante Demo";
         const defaultScopeKey = `workplace:${defaultWorkplace}`;
         const scopeKey = String(body.scopeKey || defaultScopeKey).trim().slice(0, 120) || defaultScopeKey;
         const scopeLabel = String(body.scopeLabel || scopeKey.replace(/^(group|workplace):/, "")).trim().slice(0, 120) || defaultWorkplace;
@@ -2728,7 +3018,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const result = await mutateState((state) => {
         const weekOffset = String(Number(body.weekOffset) || 0);
-        const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Bar Flora srl";
+        const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Ristorante Demo";
         state.shiftsByWeek = state.shiftsByWeek || {};
         state.shiftsByWeek[weekOffset] = state.shiftsByWeek[weekOffset] || [];
         const shift = {
@@ -2757,7 +3047,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const shiftId = shiftMatch[1];
       const result = await mutateState((state) => {
-        const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Bar Flora srl";
+        const defaultWorkplace = state.companySettings?.workplaces?.[0] || state.companySettings?.companyName || "Ristorante Demo";
         state.shiftsByWeek = state.shiftsByWeek || {};
         const weekOffset = findShiftWeekOffset(state, shiftId, body.weekOffset);
         state.shiftsByWeek[weekOffset] = state.shiftsByWeek[weekOffset] || [];
@@ -3128,7 +3418,17 @@ server.listen(port, "0.0.0.0", () => {
     }
   }
   console.log("Dipendenti: PIN personale cifrato e gestito dalla scheda dipendente.");
+  if (licenseControlUrl) {
+    console.log(`Controllo licenza remoto attivo: ${licenseControlUrl}`);
+    refreshRemoteLicense({ force: true });
+  }
 });
+
+if (licenseControlUrl) {
+  setInterval(() => {
+    refreshRemoteLicense({ force: true });
+  }, licenseRefreshIntervalMs);
+}
 
 setInterval(() => {
   if (hasFeature(licenseContext, "task_module") && licenseContext.canWrite) {

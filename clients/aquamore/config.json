@@ -4,7 +4,7 @@
   "displayName": "Aquamore",
   "accountType": null,
   "plan": "gestione",
-  "licenseStatus": "active",
+  "licenseStatus": "suspended",
   "trialEndsAt": null,
   "billing": {
     "monthlyPriceEur": 69,
@@ -23,7 +23,7 @@
   "notes": [
     "Profilo predisposto per l'onboarding; nessuna configurazione operativa e stata inserita.",
     "Piano Gestione configurato al prezzo di catalogo di 69 EUR al mese.",
-    "Licenza attiva; nessun periodo di prova configurato.",
+    "Licenza sospesa dal pannello amministrativo; nessun periodo di prova configurato.",
     "Da definire: tipo di account.",
     "Da definire: numero di sedi ed eventuali eccezioni sui moduli.",
     "Deployment Render attivo sul servizio turni-aquamore con CLIENT_ID=aquamore."

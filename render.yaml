@@ -11,6 +11,10 @@ services:
         value: production
       - key: DATA_DIR
         value: /var/data
+      - key: CLIENT_ID
+        value: aquamore
+      - key: LICENSE_CONTROL_URL
+        value: https://turni-ristorante.onrender.com
       - key: MANAGER_PASSWORD
         sync: false
     disk:
