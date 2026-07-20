@@ -16,15 +16,16 @@
   },
   "workplaces": [],
   "deployment": {
-    "provider": null,
-    "serviceName": null,
-    "publicUrl": null
+    "provider": "render",
+    "serviceName": "turni-aquamore",
+    "publicUrl": "https://turni-aquamore.onrender.com"
   },
   "notes": [
     "Profilo predisposto per l'onboarding; nessuna configurazione operativa e stata inserita.",
     "Piano Turni configurato al prezzo di catalogo di 39 EUR al mese.",
     "Licenza attiva; nessun periodo di prova configurato.",
     "Da definire: tipo di account.",
-    "Da definire: numero di sedi, eventuali eccezioni sui moduli e riferimenti di deployment non segreti."
+    "Da definire: numero di sedi ed eventuali eccezioni sui moduli.",
+    "Deployment Render attivo sul servizio turni-aquamore con CLIENT_ID=aquamore."
   ]
 }
