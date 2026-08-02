@@ -20,6 +20,8 @@ let employees = [
 ];
 
 const storageKey = "restaurantShiftPlannerState";
+const searchParams = new URLSearchParams(window.location.search);
+const demoMode = searchParams.get("demo") === "1" || window.location.pathname.endsWith("/demo.html");
 const baseWeekStart = new Date(2026, 4, 18);
 const dayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 let weekDays = buildWeekDays(0);
@@ -85,17 +87,22 @@ let taskTemplates = [];
 let taskAssignments = [];
 let editingTaskTemplateId = null;
 let completingTaskId = null;
-let pendingPunchToken = new URLSearchParams(window.location.search).get("punch") || "";
+let pendingPunchToken = demoMode ? "" : searchParams.get("punch") || "";
 let companySettings = {
-  companyName: "Bar Flora srl",
+  companyName: "Ristorante Demo",
   roles: ["Sala", "Cucina", "Bar"],
-  workplaces: ["Bar Flora srl"],
+  workplaces: ["Ristorante Demo"],
+  stations: ["Sala", "Bar", "Ristorante", "Lavaggio", "Cucina"],
   workplaceGroups: [],
   employerFiscalCode: "",
   agencyEmail: ""
 };
-const backendEnabled = location.protocol.startsWith("http");
+const backendEnabled = location.protocol.startsWith("http") && !demoMode;
 let licenseCapabilities = null;
+
+function appLocale() {
+  return window.appI18n?.locale?.() || "it-IT";
+}
 
 function hasFeature(feature) {
   if (!backendEnabled || !licenseCapabilities) return true;
@@ -150,7 +157,7 @@ function renderLicenseBanner() {
   document.querySelector("#licenseStatusText").textContent = licenseCapabilities.accessMode === "active"
     ? "Licenza attiva"
     : licenseCapabilities.accessMode === "trial"
-      ? `Prova attiva${licenseCapabilities.trialEndsAt ? ` fino al ${new Date(licenseCapabilities.trialEndsAt).toLocaleDateString("it-IT")}` : ""}`
+      ? `Prova attiva${licenseCapabilities.trialEndsAt ? ` fino al ${new Date(licenseCapabilities.trialEndsAt).toLocaleDateString(appLocale())}` : ""}`
       : licenseCapabilities.accessMode === "read_only"
         ? "Account in sola lettura"
         : "Licenza sospesa";
@@ -256,7 +263,7 @@ function buildWeekDays(offset) {
   return dayKeys.map((key, index) => {
     const date = addDays(start, index);
     const dayNumber = date.getDate();
-    const weekday = date.toLocaleDateString("it-IT", { weekday: "short" }).replace(".", "");
+    const weekday = date.toLocaleDateString(appLocale(), { weekday: "short" }).replace(".", "");
     return {
       key,
       date,
@@ -293,7 +300,7 @@ function requestCreatedLabel(request) {
   if (!request.createdAt) return "Data richiesta non disponibile";
   const date = new Date(request.createdAt);
   if (Number.isNaN(date.getTime())) return "Data richiesta non disponibile";
-  return `Inviata il ${date.toLocaleDateString("it-IT")} alle ${date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`;
+  return `Inviata il ${date.toLocaleDateString(appLocale())} alle ${date.toLocaleTimeString(appLocale(), { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function formatWeekRange() {
@@ -304,8 +311,8 @@ function formatWeekRangeForOffset(offset) {
   const days = buildWeekDays(offset);
   const start = days[0].date;
   const end = days[6].date;
-  const startLabel = start.toLocaleDateString("it-IT", { day: "numeric", month: start.getMonth() === end.getMonth() ? undefined : "long" });
-  const endLabel = end.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+  const startLabel = start.toLocaleDateString(appLocale(), { day: "numeric", month: start.getMonth() === end.getMonth() ? undefined : "long" });
+  const endLabel = end.toLocaleDateString(appLocale(), { day: "numeric", month: "long", year: "numeric" });
   return `${startLabel}-${endLabel}`;
 }
 
@@ -338,6 +345,7 @@ function visibleWeekShifts(offset = weekOffset) {
 }
 
 function saveState() {
+  if (demoMode) return;
   shiftsByWeek[weekOffset] = shifts;
   const state = {
     employees,
@@ -395,9 +403,10 @@ function loadState() {
 function applyState(state) {
   if (!state) return;
   employees = Array.isArray(state.employees) ? state.employees.map(normalizeEmployee) : employees.map(normalizeEmployee);
-  companySettings = normalizeCompanySettings(state.companySettings);
+  const stationMigration = window.TurniStations.migrateLegacyStationState(state.companySettings, state.shiftsByWeek);
+  companySettings = normalizeCompanySettings(stationMigration.companySettings);
   shiftPresets = state.shiftPresets || shiftPresets;
-  shiftsByWeek = state.shiftsByWeek || shiftsByWeek;
+  shiftsByWeek = stationMigration.shiftsByWeek || shiftsByWeek;
   weekOffset = Number(state.weekOffset) || 0;
   appMode = state.appMode || appMode;
   activeEmployeeId = state.activeEmployeeId || activeEmployeeId;
@@ -613,11 +622,12 @@ function workplaceGroupsToText(groups = []) {
 }
 
 function normalizeCompanySettings(settings = {}) {
-  const workplaces = normalizeList(settings.workplaces, [String(settings.companyName || "Bar Flora srl").trim() || "Bar Flora srl"]);
+  const workplaces = normalizeList(settings.workplaces, [String(settings.companyName || "Ristorante Demo").trim() || "Ristorante Demo"]);
   return {
-    companyName: String(settings.companyName || "Bar Flora srl").trim() || "Bar Flora srl",
+    companyName: String(settings.companyName || "Ristorante Demo").trim() || "Ristorante Demo",
     roles: normalizeList(settings.roles, ["Sala", "Cucina", "Bar"]),
     workplaces,
+    stations: normalizeList(settings.stations, window.TurniStations.DEFAULT_STATIONS),
     workplaceGroups: normalizeWorkplaceGroups(settings.workplaceGroups, workplaces),
     employerFiscalCode: String(settings.employerFiscalCode || "").trim().toUpperCase(),
     agencyEmail: String(settings.agencyEmail || "").trim()
@@ -721,15 +731,11 @@ function isTaskForSelectedDay(task) {
 }
 
 function defaultWorkplace() {
-  return companySettings.workplaces[0] || companySettings.companyName || "Bar Flora srl";
+  return companySettings.workplaces[0] || companySettings.companyName || "Ristorante Demo";
 }
 
 function companyLabel() {
-  return companySettings.companyName || "Bar Flora srl";
-}
-
-function shouldShowMurettoLogo() {
-  return companyLabel().toLowerCase().includes("muretto");
+  return companySettings.companyName || "Ristorante Demo";
 }
 
 function initials(name) {
@@ -862,8 +868,9 @@ function shiftLineForMessage(shift, offset = weekOffset) {
   const day = buildWeekDays(offset).find((item) => item.key === shift.day);
   const time = shift.start && shift.end ? ` ${shift.start}-${shift.end}` : "";
   const workplace = shift.workplace ? ` · ${shift.workplace}` : "";
+  const station = shift.station ? ` · ${shift.station}` : "";
   const note = shift.note ? ` · ${shift.note}` : "";
-  return `- ${day ? day.label : shift.day}: ${shift.type}${time}${workplace}${note}`;
+  return `- ${day ? day.label : shift.day}: ${shift.type}${time}${workplace}${station}${note}`;
 }
 
 function nextEmployeeShift(employeeId = activeEmployeeId) {
@@ -890,11 +897,11 @@ function notificationStatusFor(key) {
 }
 
 function attendanceDayKey(record) {
-  return new Date(record.timestamp).toLocaleDateString("it-IT");
+  return new Date(record.timestamp).toLocaleDateString(appLocale());
 }
 
 function todayAttendanceRecords(employeeId = activeEmployeeId) {
-  const today = new Date().toLocaleDateString("it-IT");
+  const today = new Date().toLocaleDateString(appLocale());
   return attendanceRecords
     .filter((record) => record.employeeId === employeeId && attendanceDayKey(record) === today)
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -911,7 +918,7 @@ function attendanceLabel(type) {
 }
 
 function attendanceTime(timestamp) {
-  return new Date(timestamp).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  return new Date(timestamp).toLocaleTimeString(appLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function timeInputValue(date) {
@@ -1048,7 +1055,7 @@ function formatAttendanceExportHours(value) {
 }
 
 function formatMoney(value) {
-  return Number(value || 0).toLocaleString("it-IT", { style: "currency", currency: "EUR" });
+  return Number(value || 0).toLocaleString(appLocale(), { style: "currency", currency: "EUR" });
 }
 
 function parseItalianNumber(value) {
@@ -1161,7 +1168,7 @@ function filteredEmployees() {
     const roleMatch = role === "all" || employee.role === role;
     const shiftText = visibleWeekShifts()
       .filter((shift) => shift.employeeId === employee.id)
-      .map((shift) => `${shift.type} ${shift.workplace} ${shift.note}`)
+      .map((shift) => `${shift.type} ${shift.workplace} ${shift.station || ""} ${shift.note}`)
       .join(" ")
       .toLowerCase();
     const queryMatch = !query || employee.name.toLowerCase().includes(query) || shiftText.includes(query);
@@ -1194,6 +1201,7 @@ function renderShiftCard(shift, showEmployee = false) {
   const employeeName = employee ? employee.name : "Dipendente";
   const time = shift.start && shift.end ? `${shift.start} - ${shift.end}` : "";
   const canEditShift = canManage();
+  const assignment = [shift.workplace || defaultWorkplace(), shift.station].filter(Boolean).join(" · ");
   const className = {
     day: "shift-day",
     open: "shift-open",
@@ -1212,7 +1220,8 @@ function renderShiftCard(shift, showEmployee = false) {
         </div>` : ""}
       </div>
       ${time ? `<p>${escapeHtml(time)}</p>` : ""}
-      <p>${showEmployee ? escapeHtml(employeeName) : escapeHtml(shift.workplace || defaultWorkplace())}</p>
+      <p>${showEmployee ? escapeHtml(employeeName) : escapeHtml(assignment)}</p>
+      ${showEmployee && shift.station ? `<small>${escapeHtml(shift.station)}</small>` : ""}
       ${shift.note ? `<small>${escapeHtml(shift.note)}</small>` : ""}
     </article>
   `;
@@ -1365,7 +1374,10 @@ function renderDayView() {
       <section class="day-workplace-section">
         <div class="day-workplace-section-title">
           <span>${escapeHtml(group.workplace)}</span>
-          <small>${group.shifts.length} turni</small>
+          <div class="day-workplace-section-meta">
+            <small>${group.shifts.length} turni</small>
+            <small>${escapeHtml(formatHours(group.hours))} programmate</small>
+          </div>
         </div>
         <div class="workplace-week-grid">${dayColumns}</div>
       </section>
@@ -1376,7 +1388,9 @@ function renderDayView() {
     <section class="day-workplace-section request-day-section">
       <div class="day-workplace-section-title">
         <span>Richieste</span>
-        <small>${visibleRequests.length}</small>
+        <div class="day-workplace-section-meta">
+          <small>${visibleRequests.length}</small>
+        </div>
       </div>
       <div class="workplace-week-grid">
         ${weekDays.map((day) => {
@@ -1418,6 +1432,7 @@ function groupShiftsByWorkplace(weekShifts) {
   return [...groups.entries()]
     .map(([workplace, shifts]) => ({
       workplace,
+      hours: shifts.reduce((sum, shift) => sum + shiftHours(shift), 0),
       shifts: shifts.sort((a, b) => shiftSortValue(a) - shiftSortValue(b))
     }))
     .sort((a, b) => {
@@ -1484,7 +1499,7 @@ async function refreshLastBackupSummary() {
     const payload = await apiRequest("/api/backups");
     const latest = payload.backups[0];
     document.querySelector("#dashLastBackup").textContent = latest
-      ? new Date(latest.createdAt).toLocaleString("it-IT")
+      ? new Date(latest.createdAt).toLocaleString(appLocale())
       : "Nessun backup";
   } catch {
     document.querySelector("#dashLastBackup").textContent = "Non disponibile";
@@ -1668,6 +1683,9 @@ function populateForm() {
   document.querySelector("#workplaceOptions").innerHTML = companySettings.workplaces
     .map((workplace) => `<option value="${escapeHtml(workplace)}"></option>`)
     .join("");
+  document.querySelector("#stationInput").innerHTML = `<option value="">Nessuna postazione</option>${companySettings.stations
+    .map((station) => `<option value="${escapeHtml(station)}">${escapeHtml(station)}</option>`)
+    .join("")}`;
   populateRequestWeekOptions();
   populateRequestDayOptions(weekOffset);
   populatePresetOptions();
@@ -1693,11 +1711,8 @@ function populateRequestDayOptions(offset = Number(document.querySelector("#requ
 
 function updateAccountUi() {
   const brandName = document.querySelector("#brandCompanyName");
-  const brandLogo = document.querySelector("#brandCompanyLogo");
-  const showMurettoLogo = shouldShowMurettoLogo();
   brandName.textContent = companyLabel();
-  brandName.classList.toggle("hidden", showMurettoLogo);
-  brandLogo?.classList.toggle("hidden", !showMurettoLogo);
+  brandName.classList.remove("hidden");
   document.body.classList.toggle("employee-mode", appMode === "employee");
   document.body.classList.toggle("manager-mode", canManage());
   document.body.classList.toggle("supervisor-mode", canUseSupervisorView());
@@ -1851,7 +1866,7 @@ function renderPortal() {
 function payrollMonthLabel(month) {
   const [year, monthNumber] = String(month || "").split("-").map(Number);
   if (!year || !monthNumber) return month || "";
-  return new Date(year, monthNumber - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+  return new Date(year, monthNumber - 1, 1).toLocaleDateString(appLocale(), { month: "long", year: "numeric" });
 }
 
 function renderMyPayroll() {
@@ -1988,7 +2003,7 @@ function renderEmployeeTaskCard(task) {
     <article class="task-card task-${escapeHtml(task.status)}">
       <div>
         <strong>${escapeHtml(task.title)}</strong>
-        <span>${escapeHtml(taskShiftLabel(task))}${task.workplace ? ` · ${escapeHtml(task.workplace)}` : ""}</span>
+        <span>${escapeHtml(taskShiftLabel(task))}${task.workplace ? ` · ${escapeHtml(task.workplace)}` : ""}${task.station ? ` · ${escapeHtml(task.station)}` : ""}</span>
         ${colleagues ? `<small>Condivisa con: ${escapeHtml(colleagues)}</small>` : ""}
         ${task.description ? `<small>${escapeHtml(task.description)}</small>` : ""}
         ${task.rejectionNote ? `<small>Da rifare: ${escapeHtml(task.rejectionNote)}</small>` : ""}
@@ -2029,7 +2044,7 @@ function renderVerificationTaskCard(task) {
     <article class="task-card task-${escapeHtml(task.status)}">
       <div>
         <strong>${escapeHtml(task.title)}</strong>
-        <span>${escapeHtml(taskEmployeeNames(task) || employee?.name || "Dipendente")} · ${escapeHtml(taskShiftLabel(task))}${task.workplace ? ` · ${escapeHtml(task.workplace)}` : ""}</span>
+        <span>${escapeHtml(taskEmployeeNames(task) || employee?.name || "Dipendente")} · ${escapeHtml(taskShiftLabel(task))}${task.workplace ? ` · ${escapeHtml(task.workplace)}` : ""}${task.station ? ` · ${escapeHtml(task.station)}` : ""}</span>
         ${completedBy ? `<small>Completata da: ${escapeHtml(completedBy.name)}</small>` : ""}
         ${verifier ? `<small>Verifica: ${escapeHtml(verifier.name)}</small>` : ""}
         ${task.description ? `<small>${escapeHtml(task.description)}</small>` : ""}
@@ -2913,6 +2928,32 @@ async function initializeBackend() {
   }
 }
 
+async function initializeDemo() {
+  try {
+    if (location.protocol.startsWith("http")) {
+      const payload = await apiRequest("/api/demo-state");
+      applyState(payload.state);
+    }
+  } catch {
+    // La demo resta utilizzabile anche se aperta come file locale.
+  }
+  currentUser = { role: "manager" };
+  appMode = "manager";
+  document.body.classList.remove("auth-gated");
+  populateForm();
+  render();
+  const banner = document.querySelector("#licenseBanner");
+  if (banner) {
+    banner.classList.remove("hidden", "blocked");
+    banner.classList.add("read-only");
+    document.querySelector("#licenseClientName").textContent = "Ristorante Demo";
+    document.querySelector("#licensePlanName").textContent = "Demo Turni Ristorante";
+    document.querySelector("#licenseStatusText").textContent = "Dati dimostrativi: non e l'account reale del locale";
+    document.querySelector("#licenseUpgradeLink").classList.add("hidden");
+  }
+  showAppNotice("Demo attiva: puoi provare l'app senza toccare i dati reali.", "success");
+}
+
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -2932,7 +2973,7 @@ async function loadBackups() {
       ? payload.backups.map((backup) => `
         <div class="backup-row">
           <div>
-            <strong>${escapeHtml(new Date(backup.createdAt).toLocaleString("it-IT"))}</strong>
+            <strong>${escapeHtml(new Date(backup.createdAt).toLocaleString(appLocale()))}</strong>
             <span>${escapeHtml(backup.file)} · ${formatBytes(backup.size)}</span>
           </div>
           <button class="ghost-button restore-backup" type="button" data-backup-file="${escapeHtml(backup.file)}">Ripristina</button>
@@ -3708,7 +3749,7 @@ function allocateTipCents(total, rows) {
 }
 
 function formatMoney(value) {
-  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value) || 0);
+  return new Intl.NumberFormat(appLocale(), { style: "currency", currency: "EUR" }).format(Number(value) || 0);
 }
 
 function renderTips() {
@@ -3754,7 +3795,7 @@ function renderTips() {
               aria-label="Ore lavorate da ${escapeHtml(row.employeeName)}">
             ${Math.abs(row.hours - row.baseHours) > 0.001 ? `<small>Presenze: ${escapeHtml(formatHours(row.baseHours))}</small>` : ""}
           </div>
-          <div><strong>${percentage.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</strong></div>
+          <div><strong>${percentage.toLocaleString(appLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</strong></div>
           <div>${escapeHtml(formatMoney(cash))}</div>
           <div>${escapeHtml(formatMoney(pos))}</div>
           <div><strong>${escapeHtml(formatMoney(cash + pos))}</strong></div>
@@ -3823,6 +3864,54 @@ function resetTipsHours() {
   setTipsNotice("Ore ripristinate dalle presenze. Salva il prospetto per confermare.");
 }
 
+async function exportTipsExcel() {
+  if (!canManage() || !currentTipDraft) return;
+  if (!backendEnabled) {
+    setTipsNotice("L'esportazione Excel è disponibile nell'app autenticata.", "error");
+    return;
+  }
+  updateTipsTotals();
+  syncTipsHoursFromInputs();
+  const button = document.querySelector("#exportTipsExcel");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = window.appI18n?.t("Esportazione...") || "Esportazione...";
+  setTipsNotice("");
+  try {
+    const response = await fetch(`/api/tips/${encodeURIComponent(currentTipDraft.month)}/export`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cashTotal: currentTipDraft.cashTotal,
+        posTotal: currentTipDraft.posTotal,
+        language: window.appI18n?.language?.() || "it",
+        rows: tipsRows().map((row) => ({
+          employeeName: row.employeeName,
+          archived: row.archived,
+          baseHours: row.baseHours,
+          hours: row.hours
+        }))
+      })
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || "Esportazione Excel non riuscita.");
+    }
+    const language = window.appI18n?.language?.() || "it";
+    const filename = language === "en"
+      ? `tips-report-${currentTipDraft.month}.xlsx`
+      : `prospetto-mance-${currentTipDraft.month}.xlsx`;
+    downloadBlob(await response.blob(), filename);
+    setTipsNotice("Prospetto Excel esportato.");
+  } catch (error) {
+    setTipsNotice(error.message || "Esportazione Excel non riuscita.", "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
 async function saveTips() {
   if (!canManage() || !currentTipDraft) return;
   updateTipsTotals();
@@ -3889,7 +3978,7 @@ function rowFromAttendance(inRecord, outRecord = null) {
   return {
     employeeId: baseRecord.employeeId,
     employeeName: baseRecord.employeeName || employee?.name || "Dipendente",
-    dateLabel: date.toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
+    dateLabel: date.toLocaleDateString(appLocale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
     dateInput: dateInputValue(date),
     in: inRecord || outRecord,
     out: outRecord,
@@ -3902,7 +3991,8 @@ function rowFromAttendance(inRecord, outRecord = null) {
 function shiftAttendanceLabel(shift) {
   const time = shift.start && shift.end ? `${shift.start.replace(" +1d", "")}-${shift.end}` : "";
   const place = shift.workplace ? ` · ${shift.workplace}` : "";
-  return `${shift.type}${time ? ` ${time}` : ""}${place}`;
+  const station = shift.station ? ` · ${shift.station}` : "";
+  return `${shift.type}${time ? ` ${time}` : ""}${place}${station}`;
 }
 
 function scheduledWorkingShiftsInRange(from, to, employeeFilter = "all") {
@@ -3946,7 +4036,7 @@ function withMissingScheduledAttendanceRows(rows, from, to, employeeFilter = "al
     return {
       employeeId,
       employeeName: employee?.name || "Dipendente",
-      dateLabel: date.toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
+      dateLabel: date.toLocaleDateString(appLocale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
       dateInput,
       in: null,
       out: null,
@@ -3986,7 +4076,7 @@ function withPendingManualAttendanceRows(rows, from, to, employeeFilter = "all")
       return {
         employeeId: request.employeeId,
         employeeName: request.employeeName || employee?.name || "Dipendente",
-        dateLabel: startDate.toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
+        dateLabel: startDate.toLocaleDateString(appLocale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
         dateInput: attendanceBusinessDateInput(request.startTimestamp),
         in: { timestamp: request.startTimestamp },
         out: { timestamp: request.endTimestamp },
@@ -4398,7 +4488,7 @@ function printAttendanceSummary() {
 }
 
 function historyDateLabel(value) {
-  return new Date(value).toLocaleString("it-IT", {
+  return new Date(value).toLocaleString(appLocale(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -4519,7 +4609,7 @@ function dateForShiftDay(dayKey) {
 }
 
 function formatItalianDate(date) {
-  return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString(appLocale(), { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function buildIntermittentiRows() {
@@ -4785,6 +4875,7 @@ function openCompanySettings() {
   document.querySelector("#companyNameInput").value = companySettings.companyName;
   document.querySelector("#companyRolesInput").value = companySettings.roles.join(", ");
   document.querySelector("#companyWorkplacesInput").value = companySettings.workplaces.join(", ");
+  document.querySelector("#companyStationsInput").value = companySettings.stations.join(", ");
   document.querySelector("#companyWorkplaceGroupsInput").value = workplaceGroupsToText(companySettings.workplaceGroups || []);
   document.querySelector("#companyEmployerFiscalCodeInput").value = companySettings.employerFiscalCode || "";
   document.querySelector("#companyAgencyEmailInput").value = companySettings.agencyEmail || "";
@@ -4798,6 +4889,7 @@ function saveCompanySettings(event) {
     companyName: document.querySelector("#companyNameInput").value,
     roles: document.querySelector("#companyRolesInput").value,
     workplaces: document.querySelector("#companyWorkplacesInput").value,
+    stations: document.querySelector("#companyStationsInput").value,
     workplaceGroups: document.querySelector("#companyWorkplaceGroupsInput").value,
     employerFiscalCode: document.querySelector("#companyEmployerFiscalCodeInput").value,
     agencyEmail: document.querySelector("#companyAgencyEmailInput").value
@@ -4875,7 +4967,7 @@ function renderNotificationMessages() {
           <div>
             <strong>${escapeHtml(message.employeeName)}</strong>
             <span>${message.shiftCount} elementi · ${message.phone ? escapeHtml(message.phone) : "telefono mancante"}${message.email ? ` · ${escapeHtml(message.email)}` : ""}</span>
-            <span class="notice-status ${sent ? "sent" : ""}">${sent ? `Avvisato ${escapeHtml(new Date(sent.sentAt).toLocaleString("it-IT"))}` : "Da avvisare"}</span>
+            <span class="notice-status ${sent ? "sent" : ""}">${sent ? `Avvisato ${escapeHtml(new Date(sent.sentAt).toLocaleString(appLocale()))}` : "Da avvisare"}</span>
           </div>
           <div class="notification-actions">
             <button class="ghost-button copy-notification" type="button" data-notification-index="${index}">Copia messaggio</button>
@@ -4988,7 +5080,7 @@ function renderPrintDay(day) {
               <div class="print-shift-time">${escapeHtml(time)}</div>
               <div>
                 <strong>${escapeHtml(employee?.name || "Dipendente")}</strong>
-                <span>${escapeHtml(shift.type)} · ${escapeHtml(shift.workplace || defaultWorkplace())}</span>
+                <span>${escapeHtml(shift.type)} · ${escapeHtml(shift.workplace || defaultWorkplace())}${shift.station ? ` · ${escapeHtml(shift.station)}` : ""}</span>
                 ${shift.note ? `<small>${escapeHtml(shift.note)}</small>` : ""}
               </div>
             </article>
@@ -5019,7 +5111,7 @@ function renderPrintPreview() {
         </div>
         <div class="print-meta">
           <strong>${totalRows}</strong> elementi<br>
-          ${escapeHtml(new Date().toLocaleString("it-IT"))}
+          ${escapeHtml(new Date().toLocaleString(appLocale()))}
         </div>
       </header>
       ${days.map(renderPrintDay).join("")}
@@ -5057,6 +5149,7 @@ function openShiftDialog(employeeId, day) {
   document.querySelector("#presetNameInput").value = "";
   applyPresetToForm("Diurno 2");
   document.querySelector("#workplaceInput").value = defaultWorkplace();
+  document.querySelector("#stationInput").value = "";
   if (employeeId) document.querySelector("#employeeSelect").value = employeeId;
   if (day) document.querySelector("#daySelect").value = day;
   dialog.showModal();
@@ -5090,6 +5183,7 @@ function openShiftDialogForEdit(shiftId) {
   document.querySelector("#endTime").value = shift.end ? shift.end.slice(0, 5) : "17:00";
   document.querySelector("#colorInput").value = shift.color || shiftPresets[shift.type]?.color || "#95ddd8";
   document.querySelector("#workplaceInput").value = shift.workplace || defaultWorkplace();
+  document.querySelector("#stationInput").value = shift.station || "";
   document.querySelector("#noteInput").value = shift.note || "";
   dialog.showModal();
 }
@@ -5243,6 +5337,7 @@ document.querySelector("#tipsPosTotal").addEventListener("input", updateTipsTota
 document.querySelector("#tipsTable").addEventListener("input", updateTipsHours);
 document.querySelector("#tipsTable").addEventListener("change", updateTipsHours);
 document.querySelector("#resetTipsHours").addEventListener("click", resetTipsHours);
+document.querySelector("#exportTipsExcel").addEventListener("click", exportTipsExcel);
 document.querySelector("#saveTips").addEventListener("click", saveTips);
 document.querySelector("#openPayroll").addEventListener("click", () => {
   if (!canManage()) return;
@@ -5326,7 +5421,7 @@ document.querySelector("#attendanceTo").addEventListener("change", () => {
   renderAttendanceList();
 });
 document.querySelector("#openTaskManager").addEventListener("click", () => {
-  window.location.href = "/mansionario.html";
+  window.location.href = "mansionario.html";
 });
 document.querySelector("#closeTaskDialog").addEventListener("click", () => taskDialog.close());
 document.querySelector("#taskModuleEnabled").addEventListener("change", toggleTaskModule);
@@ -5458,6 +5553,7 @@ document.querySelector("#shiftForm").addEventListener("submit", async (event) =>
     start: preset.category === "rest" || preset.category === "leave" ? "" : startValue,
     end: preset.category === "rest" || preset.category === "leave" ? "" : `${endValue}${isOvernight ? " +1d" : ""}`,
     workplace: document.querySelector("#workplaceInput").value.trim() || defaultWorkplace(),
+    station: document.querySelector("#stationInput").value,
     color: document.querySelector("#colorInput").value,
     note: document.querySelector("#noteInput").value.trim(),
     category: preset.category
@@ -5501,6 +5597,7 @@ document.querySelector("#shiftForm").addEventListener("submit", async (event) =>
   populatePresetOptions("Diurno 2");
   applyPresetToForm("Diurno 2");
   document.querySelector("#workplaceInput").value = defaultWorkplace();
+  document.querySelector("#stationInput").value = "";
   dialog.close();
   render();
   if (!backendEnabled || currentUser?.role !== "manager") saveState();
@@ -5512,7 +5609,18 @@ document.querySelector("#shiftForm").addEventListener("submit", async (event) =>
 
 setupTimeInputs();
 
-if (backendEnabled) {
+window.addEventListener("app-language-change", () => {
+  weekDays = buildWeekDays(weekOffset);
+  populateForm();
+  render();
+  window.appI18n?.translatePage();
+});
+
+if (demoMode) {
+  populateForm();
+  updateLoginFields();
+  initializeDemo();
+} else if (backendEnabled) {
   document.body.classList.add("auth-gated");
   populateForm();
   updateLoginFields();

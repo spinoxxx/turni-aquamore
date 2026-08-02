@@ -2,6 +2,8 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { migrateLegacyStationState } = require("./stations");
+const { createTipsWorkbookBuffer } = require("./tips-export");
 const {
   featureForApiRequest,
   hasFeature,
@@ -47,6 +49,13 @@ const employeeDocumentsDir = path.join(dataDir, "employee-documents");
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
 const mansionarioApiKey = process.env.MANSIONARIO_API_KEY || "";
+const googleTagId = String(process.env.GOOGLE_TAG_ID || process.env.GA4_MEASUREMENT_ID || "").trim();
+const googleAdsId = String(process.env.GOOGLE_ADS_ID || "").trim();
+const googleAdsLeadLabel = String(process.env.GOOGLE_ADS_LEAD_LABEL || "").trim();
+const metaPixelId = String(process.env.META_PIXEL_ID || "").trim();
+const metaCapiAccessToken = String(process.env.META_CAPI_ACCESS_TOKEN || "").trim();
+const metaTestEventCode = String(process.env.META_TEST_EVENT_CODE || "").trim();
+const metaGraphApiVersion = String(process.env.META_GRAPH_API_VERSION || "v24.0").trim();
 if (webPush && vapidPublicKey && vapidPrivateKey) {
   webPush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:info@example.com", vapidPublicKey, vapidPrivateKey);
 }
@@ -133,9 +142,12 @@ const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".pdf": "application/pdf"
 };
@@ -284,12 +296,14 @@ function readDemoState() {
 
 function normalizeState(state) {
   if (!state) return state;
+  const stationMigration = migrateLegacyStationState(state.companySettings, state.shiftsByWeek);
   const companySettings = {
-    companyName: state.companySettings?.companyName || "Ristorante Demo",
-    roles: Array.isArray(state.companySettings?.roles) && state.companySettings.roles.length ? state.companySettings.roles : ["Sala", "Cucina", "Bar"],
-    workplaces: Array.isArray(state.companySettings?.workplaces) && state.companySettings.workplaces.length ? state.companySettings.workplaces : ["Ristorante Demo"],
-    workplaceGroups: Array.isArray(state.companySettings?.workplaceGroups)
-      ? state.companySettings.workplaceGroups
+    companyName: stationMigration.companySettings.companyName || "Ristorante Demo",
+    roles: Array.isArray(stationMigration.companySettings.roles) && stationMigration.companySettings.roles.length ? stationMigration.companySettings.roles : ["Sala", "Cucina", "Bar"],
+    workplaces: stationMigration.companySettings.workplaces,
+    stations: stationMigration.companySettings.stations,
+    workplaceGroups: Array.isArray(stationMigration.companySettings.workplaceGroups)
+      ? stationMigration.companySettings.workplaceGroups
         .map((group) => ({
           name: String(group?.name || "").trim(),
           workplaces: Array.isArray(group?.workplaces) ? group.workplaces.map((item) => String(item || "").trim()).filter(Boolean) : []
@@ -310,7 +324,7 @@ function normalizeState(state) {
   const normalized = {
     ...state,
     companySettings,
-    shiftsByWeek: state.shiftsByWeek || {},
+    shiftsByWeek: stationMigration.shiftsByWeek || {},
     timeOffRequests: Array.isArray(state.timeOffRequests) ? state.timeOffRequests : [],
     employees,
     publishedWeeks: state.publishedWeeks || { 0: true },
@@ -1062,6 +1076,7 @@ function taskGroupKey(template, shift) {
     template.assignmentMode === "single" ? shift.employeeId : "shared",
     shift.day,
     shift.workplace || "",
+    shift.station || "",
     template.taskTime || "",
     template.shiftType === "all" ? "all" : template.shiftType === shift.category ? shift.category : shift.type || ""
   ].join("|");
@@ -1078,6 +1093,7 @@ function sharedTaskKey(task) {
     task.templateId,
     task.groupKey || "",
     task.workplace || "",
+    task.station || "",
     task.shiftType || ""
   ].join("|");
 }
@@ -1142,6 +1158,7 @@ function generateTaskAssignmentsForPublication(state, offset, day = null) {
           if (existing.status === "assigned" || existing.status === "rejected") {
             existing.employeeId = existing.employeeIds[0] || shift.employeeId;
             existing.workplace = shift.workplace || "";
+            existing.station = shift.station || "";
             existing.shiftType = shift.type || "";
             existing.start = shift.start || "";
             existing.end = shift.end || "";
@@ -1167,6 +1184,7 @@ function generateTaskAssignmentsForPublication(state, offset, day = null) {
           employeeId: shift.employeeId,
           employeeIds: [shift.employeeId],
           workplace: shift.workplace || "",
+          station: shift.station || "",
           shiftType: shift.type || "",
           start: shift.start || "",
           end: shift.end || "",
@@ -1268,6 +1286,116 @@ function cleanLeadText(value, maxLength = 300) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
+const leadStages = new Set(["new", "contacted", "qualified", "demo_scheduled", "trial_active", "customer", "lost"]);
+const attributionKeys = ["utmSource", "utmMedium", "utmCampaign", "utmContent", "utmTerm", "gclid", "fbclid", "landingPage"];
+
+function cleanLeadStage(value, fallback = "new") {
+  const stage = cleanLeadText(value, 40);
+  return leadStages.has(stage) ? stage : fallback;
+}
+
+function leadIsQualified(body) {
+  const region = cleanLeadText(body.region, 80).toLowerCase();
+  const staffSize = cleanLeadText(body.staffSize, 30);
+  const role = cleanLeadText(body.contactRole, 80).toLowerCase();
+  const timeline = cleanLeadText(body.timeline, 40);
+  return region === "lombardia"
+    && ["6-12", "13-25"].includes(staffSize)
+    && ["titolare", "responsabile", "amministrazione"].includes(role)
+    && ["entro-30-giorni", "entro-60-giorni"].includes(timeline);
+}
+
+function hashMarketingValue(value) {
+  const normalized = cleanLeadText(value, 220).toLowerCase().replace(/\s+/g, "");
+  return normalized ? crypto.createHash("sha256").update(normalized).digest("hex") : "";
+}
+
+function marketingConfig() {
+  return { googleTagId, googleAdsId, googleAdsLeadLabel, metaPixelId };
+}
+
+async function sendMetaLeadEvent(lead, req) {
+  if (!metaPixelId || !metaCapiAccessToken || lead.marketingConsent !== "yes") return;
+  const userData = {
+    client_user_agent: cleanLeadText(req.headers["user-agent"], 500),
+    client_ip_address: cleanLeadText(req.headers["x-forwarded-for"] || req.socket.remoteAddress, 120).split(",")[0].trim()
+  };
+  const emailHash = hashMarketingValue(lead.email);
+  const phoneHash = hashMarketingValue(lead.phone);
+  if (emailHash) userData.em = [emailHash];
+  if (phoneHash) userData.ph = [phoneHash];
+  const payload = {
+    data: [{
+      event_name: lead.qualified ? "QualifiedLead" : "Lead",
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: lead.eventId || lead.submissionId || lead.id,
+      event_source_url: lead.landingPage || "https://turniristorante.it/",
+      action_source: "website",
+      user_data: userData,
+      custom_data: {
+        content_name: "Prova gratuita con onboarding",
+        currency: "EUR",
+        value: lead.qualified ? 35 : 5,
+        staff_size: lead.staffSize || ""
+      }
+    }]
+  };
+  if (metaTestEventCode) payload.test_event_code = metaTestEventCode;
+  try {
+    const response = await fetch(`https://graph.facebook.com/${encodeURIComponent(metaGraphApiVersion)}/${encodeURIComponent(metaPixelId)}/events?access_token=${encodeURIComponent(metaCapiAccessToken)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4_000)
+    });
+    if (!response.ok) throw new Error(`Meta CAPI HTTP ${response.status}`);
+  } catch (error) {
+    console.error(`Invio Meta CAPI non riuscito: ${error.message}`);
+  }
+}
+
+async function sendMetaPipelineEvent(lead, stage) {
+  if (!metaPixelId || !metaCapiAccessToken || lead.marketingConsent !== "yes") return;
+  const eventSettings = {
+    demo_scheduled: ["Schedule", 20],
+    trial_active: ["StartTrial", 69],
+    customer: ["Purchase", 69]
+  }[stage];
+  if (!eventSettings) return;
+  const [eventName, value] = eventSettings;
+  const userData = {
+    client_user_agent: lead.userAgent || "",
+    client_ip_address: String(lead.ipHint || "").split(",")[0].trim()
+  };
+  const emailHash = hashMarketingValue(lead.email);
+  const phoneHash = hashMarketingValue(lead.phone);
+  if (emailHash) userData.em = [emailHash];
+  if (phoneHash) userData.ph = [phoneHash];
+  const payload = {
+    data: [{
+      event_name: eventName,
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: `${lead.id}-${stage}-${Date.now()}`,
+      event_source_url: lead.landingPage || "https://turniristorante.it/",
+      action_source: "website",
+      user_data: userData,
+      custom_data: { currency: "EUR", value }
+    }]
+  };
+  if (metaTestEventCode) payload.test_event_code = metaTestEventCode;
+  try {
+    const response = await fetch(`https://graph.facebook.com/${encodeURIComponent(metaGraphApiVersion)}/${encodeURIComponent(metaPixelId)}/events?access_token=${encodeURIComponent(metaCapiAccessToken)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4_000)
+    });
+    if (!response.ok) throw new Error(`Meta CAPI HTTP ${response.status}`);
+  } catch (error) {
+    console.error(`Invio evento pipeline Meta non riuscito: ${error.message}`);
+  }
+}
+
 function readLeads() {
   ensureDataStorage();
   if (!fs.existsSync(leadsPath)) return [];
@@ -1277,8 +1405,45 @@ function readLeads() {
 
 function writeLead(lead) {
   const leads = readLeads();
+  const duplicate = lead.submissionId && leads.find((item) => item.submissionId === lead.submissionId);
+  if (duplicate) return duplicate;
   leads.unshift(lead);
-  fs.writeFileSync(leadsPath, JSON.stringify(leads.slice(0, 1000), null, 2));
+  writeJsonAtomic(leadsPath, leads.slice(0, 1000));
+  return lead;
+}
+
+function updateLeadPipeline(leadId, patch) {
+  const leads = readLeads();
+  const index = leads.findIndex((lead) => lead.id === leadId);
+  if (index < 0) return { error: "Lead non trovato" };
+  const current = leads[index];
+  const nextStage = cleanLeadStage(patch.stage, current.stage || "new");
+  const now = new Date().toISOString();
+  leads[index] = {
+    ...current,
+    stage: nextStage,
+    lostReason: nextStage === "lost" ? cleanLeadText(patch.lostReason, 300) : "",
+    stageUpdatedAt: now,
+    stageHistory: [...(Array.isArray(current.stageHistory) ? current.stageHistory : []), { stage: nextStage, at: now }].slice(-30)
+  };
+  writeJsonAtomic(leadsPath, leads);
+  void sendMetaPipelineEvent(leads[index], nextStage);
+  return { lead: leads[index], leads };
+}
+
+function syncLeadStageByClient(clientId, stage) {
+  const leads = readLeads();
+  const index = leads.findIndex((lead) => lead.convertedClientId === clientId);
+  if (index < 0) return;
+  const now = new Date().toISOString();
+  leads[index] = {
+    ...leads[index],
+    stage,
+    stageUpdatedAt: now,
+    stageHistory: [...(leads[index].stageHistory || []), { stage, at: now }].slice(-30)
+  };
+  writeJsonAtomic(leadsPath, leads);
+  void sendMetaPipelineEvent(leads[index], stage);
 }
 
 function csvCell(value) {
@@ -1292,15 +1457,55 @@ function leadsCsv(leads) {
     ["city", "Citta"],
     ["staffSize", "Staff"],
     ["contactName", "Referente"],
+    ["contactRole", "Ruolo"],
+    ["phone", "Telefono"],
+    ["email", "Email"],
+    ["preferredContact", "Canale preferito"],
     ["contactMethod", "Contatto"],
     ["currentTool", "Gestione attuale"],
+    ["mainProblem", "Problema principale"],
+    ["timeline", "Tempistica"],
     ["message", "Note"],
-    ["source", "Fonte"]
+    ["privacyConsent", "Consenso privacy"],
+    ["marketingConsent", "Consenso marketing"],
+    ["source", "Fonte"],
+    ["stage", "Stato commerciale"],
+    ["lostReason", "Motivo perdita"],
+    ["qualified", "Lead qualificato"],
+    ...attributionKeys.map((key) => [key, key]),
+    ["convertedClientId", "Cliente creato"],
+    ["convertedAt", "Conversione"]
   ];
   return [
     columns.map(([, label]) => csvCell(label)).join(","),
     ...leads.map((lead) => columns.map(([key]) => csvCell(lead[key])).join(","))
   ].join("\n");
+}
+
+function googleOfflineConversionsCsv(leads) {
+  const stageSettings = {
+    qualified: [process.env.GOOGLE_ADS_QUALIFIED_CONVERSION_NAME || "Lead qualificato", 35],
+    trial_active: [process.env.GOOGLE_ADS_TRIAL_CONVERSION_NAME || "Prova attivata", 69],
+    customer: [process.env.GOOGLE_ADS_CUSTOMER_CONVERSION_NAME || "Cliente pagante", 69]
+  };
+  const rows = leads.flatMap((lead) => {
+    if (!lead.gclid) return [];
+    const history = Array.isArray(lead.stageHistory) ? lead.stageHistory : [];
+    const firstByStage = new Map();
+    history.forEach((entry) => {
+      if (stageSettings[entry.stage] && !firstByStage.has(entry.stage)) firstByStage.set(entry.stage, entry.at);
+    });
+    return [...firstByStage.entries()].map(([stage, at]) => {
+      const [name, value] = stageSettings[stage];
+      const date = new Date(at);
+      const conversionTime = Number.isNaN(date.getTime())
+        ? ""
+        : `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 19)}+00:00`;
+      return [lead.gclid, name, conversionTime, value, "EUR", `${lead.id}-${stage}`];
+    });
+  });
+  const header = ["Google Click ID", "Conversion Name", "Conversion Time", "Conversion Value", "Conversion Currency", "Order ID"];
+  return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 }
 
 function readPlanCatalog() {
@@ -1322,13 +1527,14 @@ function readLicenseOverrides() {
 
 function readEffectiveClientConfig(clientId) {
   const configPath = path.join(root, "clients", clientId, "config.json");
-  if (!fs.existsSync(configPath)) return null;
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   const override = readLicenseOverrides()[clientId] || {};
+  const hasBaseConfig = fs.existsSync(configPath);
+  if (!hasBaseConfig && !override.clientId) return null;
+  const config = hasBaseConfig ? JSON.parse(fs.readFileSync(configPath, "utf8")) : override;
   return {
     ...config,
     ...override,
-    clientId: config.clientId,
+    clientId: config.clientId || clientId,
     billing: {
       ...(config.billing || {}),
       ...(override.billing || {})
@@ -1343,13 +1549,14 @@ function readEffectiveClientConfig(clientId) {
 function listClientLicenseSummaries() {
   const catalog = readPlanCatalog();
   const clientsDir = path.join(root, "clients");
-  if (!fs.existsSync(clientsDir)) return [];
-  return fs.readdirSync(clientsDir)
-    .filter((clientId) => !clientId.startsWith("_"))
+  const baseClientIds = fs.existsSync(clientsDir)
+    ? fs.readdirSync(clientsDir).filter((clientId) => !clientId.startsWith("_"))
+    : [];
+  const overrideClientIds = Object.keys(readLicenseOverrides()).filter((clientId) => !clientId.startsWith("_"));
+  return [...new Set([...baseClientIds, ...overrideClientIds])]
     .map((clientId) => {
-      const configPath = path.join(clientsDir, clientId, "config.json");
-      if (!fs.existsSync(configPath)) return null;
       const config = readEffectiveClientConfig(clientId);
+      if (!config) return null;
       const planCode = config.plan || catalog.defaultPlan;
       const plan = catalog.plans?.[planCode] || {};
       const billing = config.billing || {};
@@ -1404,13 +1611,103 @@ function nullableNumber(value, minimum = 0) {
   return number;
 }
 
+function normalizeNullableText(value, maxLength = 160) {
+  const text = cleanLeadText(value, maxLength);
+  return text || null;
+}
+
+function createClientFromLead(patch) {
+  const safeClientId = safeAdminClientId(patch.clientId);
+  if (!safeClientId) return { error: "Usa un ID cliente con lettere minuscole, numeri e trattini" };
+
+  const catalog = readPlanCatalog();
+  const nextPlan = String(patch.plan || catalog.defaultPlan || "").trim();
+  if (!catalog.plans?.[nextPlan]) return { error: "Piano non valido" };
+
+  const overrides = readLicenseOverrides();
+  const configPath = path.join(root, "clients", safeClientId, "config.json");
+  if (fs.existsSync(configPath) || overrides[safeClientId]) return { error: "Cliente gia presente" };
+
+  const displayName = cleanLeadText(patch.displayName, 120);
+  if (!displayName) return { error: "Inserisci il nome cliente" };
+
+  const nextStatus = String(patch.licenseStatus || "trial").trim();
+  if (!["trial", "active", "past_due", "suspended"].includes(nextStatus)) return { error: "Stato licenza non valido" };
+
+  const activatedAt = nullableIsoDate(patch.activatedAt);
+  const trialStartedAt = nullableIsoDate(patch.trialStartedAt);
+  const trialEndsAt = nullableIsoDate(patch.trialEndsAt);
+  const nextRenewalAt = nullableIsoDate(patch.nextRenewalAt);
+  if ([activatedAt, trialStartedAt, trialEndsAt, nextRenewalAt].includes(undefined)) {
+    return { error: "Usa date in formato AAAA-MM-GG oppure lascia vuoto" };
+  }
+
+  const monthlyPriceEur = nullableNumber(patch.monthlyPriceEur, 0);
+  const additionalLocations = nullableNumber(patch.additionalLocations, 0);
+  if (monthlyPriceEur === undefined || additionalLocations === undefined) {
+    return { error: "Prezzo e sedi extra devono essere numeri validi" };
+  }
+
+  const leadId = cleanLeadText(patch.leadId, 80);
+  const leads = readLeads();
+  const leadIndex = leadId ? leads.findIndex((lead) => lead.id === leadId) : -1;
+  const createdAt = new Date().toISOString();
+  const config = {
+    schemaVersion: 1,
+    clientId: safeClientId,
+    displayName,
+    accountType: null,
+    plan: nextPlan,
+    licenseStatus: nextStatus,
+    activatedAt,
+    trialStartedAt,
+    trialEndsAt,
+    nextRenewalAt,
+    billing: {
+      period: "monthly",
+      monthlyPriceEur,
+      additionalLocations
+    },
+    featureOverrides: {},
+    deployment: {
+      provider: "render",
+      serviceName: normalizeNullableText(patch.serviceName, 120),
+      publicUrl: normalizeNullableText(patch.publicUrl, 220)
+    },
+    notes: [
+      leadId ? `Creato da lead landing ${leadId} il ${createdAt.slice(0, 10)}.` : `Creato da dashboard lead il ${createdAt.slice(0, 10)}.`
+    ],
+    createdAt,
+    updatedAt: createdAt
+  };
+
+  overrides[safeClientId] = config;
+  writeJsonAtomic(licenseOverridesPath, overrides);
+
+  if (leadIndex >= 0) {
+    const stage = nextStatus === "active" ? "customer" : "trial_active";
+    leads[leadIndex] = {
+      ...leads[leadIndex],
+      convertedClientId: safeClientId,
+      convertedAt: createdAt,
+      stage,
+      stageUpdatedAt: createdAt,
+      stageHistory: [...(leads[leadIndex].stageHistory || []), { stage, at: createdAt }].slice(-30)
+    };
+    writeJsonAtomic(leadsPath, leads);
+  }
+
+  if (safeClientId === licenseContext.clientId) applyLicenseOverride(config);
+  return { config };
+}
+
 function updateClientLicenseConfig(clientId, patch) {
   const safeClientId = safeAdminClientId(clientId);
   if (!safeClientId) return { error: "Cliente non valido" };
   const catalog = readPlanCatalog();
   const configPath = path.join(root, "clients", safeClientId, "config.json");
-  if (!fs.existsSync(configPath)) return { error: "Configurazione cliente non trovata" };
   const config = readEffectiveClientConfig(safeClientId);
+  if (!config) return { error: "Configurazione cliente non trovata" };
   if (config.clientId !== safeClientId) return { error: "clientId non coerente nel config" };
 
   const nextPlan = String(patch.plan || config.plan || "").trim();
@@ -1457,6 +1754,8 @@ function updateClientLicenseConfig(clientId, patch) {
     updatedAt: new Date().toISOString()
   };
   writeJsonAtomic(licenseOverridesPath, overrides);
+  if (nextStatus === "active") syncLeadStageByClient(safeClientId, "customer");
+  if (nextStatus === "trial") syncLeadStageByClient(safeClientId, "trial_active");
   if (safeClientId === licenseContext.clientId) applyLicenseOverride(config);
   return { config };
 }
@@ -1613,6 +1912,7 @@ function serveStatic(req, res) {
     relativePath === "launch-leads.json" ||
     relativePath === "seed-data.json" ||
     relativePath === "server.js" ||
+    relativePath === "tips-export.js" ||
     relativePath === "package.json" ||
     relativePath === path.join("assets", "muretto-logo.png") ||
     relativePath.endsWith(".md") ||
@@ -1622,6 +1922,7 @@ function serveStatic(req, res) {
     relativePath.startsWith(`employee-documents${path.sep}`) ||
     relativePath.startsWith(`clients${path.sep}`) ||
     relativePath.startsWith(`plans${path.sep}`) ||
+    relativePath.startsWith(`marketing${path.sep}`) ||
     relativePath === "license.js" ||
     relativePath.startsWith(`tests${path.sep}`) ||
     relativePath.startsWith(`versions${path.sep}`) ||
@@ -1686,13 +1987,19 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/marketing/config" && req.method === "GET") {
+      sendJson(res, 200, marketingConfig(), { "Cache-Control": "no-store" });
+      return;
+    }
+
     const licensePublicPaths = new Set([
       "/api/session",
       "/api/login",
       "/api/logout",
       "/api/login/employees",
       "/api/leads",
-      "/api/leads.csv"
+      "/api/leads.csv",
+      "/api/marketing/config"
     ]);
     if (url.pathname.startsWith("/api/") && licenseContext.accessMode === "blocked" && !licensePublicPaths.has(url.pathname)) {
       sendJson(res, 423, {
@@ -1740,17 +2047,38 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const email = cleanLeadText(body.email, 180);
+      const phone = cleanLeadText(body.phone, 80);
+      const fallbackContact = cleanLeadText(body.contactMethod, 180);
+      const now = new Date().toISOString();
+      const qualified = leadIsQualified(body);
       const lead = {
         id: `lead${Date.now()}-${crypto.randomBytes(5).toString("hex")}`,
+        submissionId: cleanLeadText(body.submissionId, 100),
+        eventId: cleanLeadText(body.eventId, 100),
         restaurantName: cleanLeadText(body.restaurantName, 120),
         city: cleanLeadText(body.city, 80),
+        region: cleanLeadText(body.region, 80),
         staffSize: cleanLeadText(body.staffSize, 30),
         contactName: cleanLeadText(body.contactName, 120),
-        contactMethod: cleanLeadText(body.contactMethod, 180),
+        contactRole: cleanLeadText(body.contactRole, 80),
+        phone,
+        email,
+        preferredContact: cleanLeadText(body.preferredContact, 40),
+        contactMethod: fallbackContact || phone || email,
         currentTool: cleanLeadText(body.currentTool, 120),
+        mainProblem: cleanLeadText(body.mainProblem, 160),
+        timeline: cleanLeadText(body.timeline, 40),
         message: cleanLeadText(body.message, 600),
+        privacyConsent: cleanLeadText(body.privacyConsent, 20) === "yes" ? "yes" : "",
+        marketingConsent: cleanLeadText(body.marketingConsent, 20) === "yes" ? "yes" : "",
         source: cleanLeadText(body.source, 80) || "landing",
-        createdAt: new Date().toISOString(),
+        ...Object.fromEntries(attributionKeys.map((key) => [key, cleanLeadText(body[key], key === "landingPage" ? 500 : 180)])),
+        qualified,
+        stage: qualified ? "qualified" : "new",
+        stageUpdatedAt: now,
+        stageHistory: [{ stage: qualified ? "qualified" : "new", at: now }],
+        createdAt: now,
         userAgent: cleanLeadText(req.headers["user-agent"], 220),
         ipHint: cleanLeadText(req.headers["x-forwarded-for"] || req.socket.remoteAddress, 120)
       };
@@ -1760,8 +2088,14 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      writeLead(lead);
-      sendJson(res, 200, { ok: true });
+      if (lead.source === "ads-lombardia" && !lead.privacyConsent) {
+        sendJson(res, 400, { error: "Accetta l'informativa privacy per inviare la richiesta." });
+        return;
+      }
+
+      const savedLead = writeLead(lead);
+      if (savedLead.id === lead.id) void sendMetaLeadEvent(savedLead, req);
+      sendJson(res, 200, { ok: true, leadId: savedLead.id, qualified: Boolean(savedLead.qualified) });
       return;
     }
 
@@ -1769,6 +2103,20 @@ const server = http.createServer(async (req, res) => {
       const user = managerOnly(req, res);
       if (!user) return;
       sendJson(res, 200, { leads: readLeads() });
+      return;
+    }
+
+    const leadPipelineMatch = url.pathname.match(/^\/api\/leads\/([a-zA-Z0-9-]{8,100})$/);
+    if (leadPipelineMatch && req.method === "PATCH") {
+      const user = managerOnly(req, res);
+      if (!user) return;
+      const body = await readBody(req);
+      const result = updateLeadPipeline(leadPipelineMatch[1], body);
+      if (result.error) {
+        sendJson(res, 404, { error: result.error });
+        return;
+      }
+      sendJson(res, 200, { ok: true, lead: result.lead, leads: result.leads }, { "Cache-Control": "no-store" });
       return;
     }
 
@@ -1783,12 +2131,42 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/ads/google-offline-conversions.csv" && req.method === "GET") {
+      const user = managerOnly(req, res);
+      if (!user) return;
+      res.writeHead(200, {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": "attachment; filename=\"google-offline-conversions.csv\""
+      });
+      res.end(googleOfflineConversionsCsv(readLeads()));
+      return;
+    }
+
     if (url.pathname === "/api/admin/licenses" && req.method === "GET") {
       const user = managerOnly(req, res);
       if (!user) return;
       const catalog = readPlanCatalog();
       sendJson(res, 200, {
         clients: listClientLicenseSummaries(),
+        plans: listPlanOptions(catalog)
+      }, { "Cache-Control": "no-store" });
+      return;
+    }
+
+    if (url.pathname === "/api/admin/clients" && req.method === "POST") {
+      const user = managerOnly(req, res);
+      if (!user) return;
+      const body = await readBody(req);
+      const result = createClientFromLead(body);
+      if (result.error) {
+        sendJson(res, 400, { error: result.error });
+        return;
+      }
+      const catalog = readPlanCatalog();
+      sendJson(res, 201, {
+        ok: true,
+        clients: listClientLicenseSummaries(),
+        leads: readLeads(),
         plans: listPlanOptions(catalog)
       }, { "Cache-Control": "no-store" });
       return;
@@ -1895,6 +2273,41 @@ const server = http.createServer(async (req, res) => {
         return {};
       });
       sendJson(res, 200, { ok: true, state: stateForUser(result.state, user) });
+      return;
+    }
+
+    const tipsExportMatch = url.pathname.match(/^\/api\/tips\/(\d{4}-\d{2})\/export$/);
+    if (tipsExportMatch && req.method === "POST") {
+      const user = managerOnly(req, res);
+      if (!user) return;
+      if (!xlsx) {
+        sendJson(res, 503, { error: "Esportazione Excel non configurata: manca la libreria xlsx." });
+        return;
+      }
+      const body = await readBody(req);
+      try {
+        const language = body.language === "en" ? "en" : "it";
+        const state = readState();
+        const buffer = createTipsWorkbookBuffer(xlsx, {
+          ...body,
+          month: tipsExportMatch[1],
+          language,
+          companyName: state.companySettings?.companyName || "Turni Ristorante"
+        });
+        const filename = language === "en"
+          ? `tips-report-${tipsExportMatch[1]}.xlsx`
+          : `prospetto-mance-${tipsExportMatch[1]}.xlsx`;
+        res.writeHead(200, {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Length": buffer.length,
+          "Content-Disposition": `attachment; filename="${safeDownloadName(filename)}"`,
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff"
+        });
+        res.end(buffer);
+      } catch (error) {
+        sendJson(res, 400, { error: error.message || "Esportazione Excel non riuscita." });
+      }
       return;
     }
 
@@ -3029,6 +3442,7 @@ const server = http.createServer(async (req, res) => {
           start: body.start || "",
           end: body.end || "",
           workplace: body.workplace || defaultWorkplace,
+          station: String(body.station || "").trim(),
           color: body.color || "#95ddd8",
           note: body.note || "",
           category: body.category || "day"
@@ -3063,6 +3477,7 @@ const server = http.createServer(async (req, res) => {
             start: body.start || "",
             end: body.end || "",
             workplace: body.workplace || defaultWorkplace,
+            station: String(body.station || "").trim(),
             color: body.color || "#95ddd8",
             note: body.note || "",
             category: body.category || "day"
@@ -3072,6 +3487,7 @@ const server = http.createServer(async (req, res) => {
               task.employeeId = nextShift.employeeId;
               task.day = nextShift.day;
               task.workplace = nextShift.workplace;
+              task.station = nextShift.station;
               task.shiftType = nextShift.type;
               task.start = nextShift.start;
               task.end = nextShift.end;

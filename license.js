@@ -125,6 +125,7 @@ function featureForApiRequest(pathname) {
 }
 
 function isProtectedMutation(pathname, method) {
+  if (method === "POST" && /^\/api\/tips\/\d{4}-\d{2}\/export$/.test(pathname)) return false;
   return pathname.startsWith("/api/")
     && MUTATING_METHODS.has(method)
     && !PUBLIC_MUTATION_PATHS.has(pathname);
