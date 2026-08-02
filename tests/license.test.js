@@ -83,6 +83,7 @@ assert.equal(featureForApiRequest("/api/attendance/import"), "attendance_import_
 assert.equal(featureForApiRequest("/api/payroll/doc/file"), "payroll_documents");
 assert.equal(featureForApiRequest("/api/state"), null);
 assert.equal(isProtectedMutation("/api/shifts", "POST"), true);
+assert.equal(isProtectedMutation("/api/tips/2026-08/export", "POST"), false);
 assert.equal(isProtectedMutation("/api/login", "POST"), false);
 assert.equal(isProtectedMutation("/api/leads", "POST"), false);
 assert.equal(isProtectedMutation("/api/state", "GET"), false);
