@@ -628,22 +628,29 @@
         </div>
 
         <div class="intermittenti-panel">
-          <div class="copy-mode">
-            <label>
-              <input type="radio" name="intermittentiScope" value="week" checked>
-              <span>Settimana intera</span>
-            </label>
-            <label>
-              <input type="radio" name="intermittentiScope" value="day">
-              <span>Singolo giorno</span>
-            </label>
+          <div class="intermittenti-filters">
+            <fieldset class="intermittenti-employee-filter">
+              <legend>Dipendenti da includere</legend>
+              <label class="checkbox-field intermittenti-select-all">
+                <input id="intermittentiSelectAllEmployees" type="checkbox" checked>
+                <span>Tutti i dipendenti a chiamata</span>
+              </label>
+              <div class="intermittenti-employee-list" id="intermittentiEmployeeList"></div>
+            </fieldset>
+
+            <div class="form-grid intermittenti-period-filter">
+              <label>
+                <span>Data iniziale</span>
+                <input id="intermittentiDateFrom" type="date">
+              </label>
+              <label>
+                <span>Data finale</span>
+                <input id="intermittentiDateTo" type="date">
+              </label>
+            </div>
           </div>
 
           <div class="form-grid">
-            <label class="intermittenti-day-field hidden">
-              <span>Giorno da includere</span>
-              <select id="intermittentiDay"></select>
-            </label>
             <label>
               <span>Codice fiscale datore</span>
               <input id="intermittentiEmployerFiscalCode" type="text" placeholder="Codice fiscale azienda">
@@ -1201,8 +1208,8 @@
       </form>
     </dialog>
 
-    <script src="i18n.js?v=3"></script>
+    <script src="i18n.js?v=4"></script>
     <script src="stations.js?v=1"></script>
-    <script src="app.js?v=121"></script>
+    <script src="app.js?v=122"></script>
   </body>
 </html>

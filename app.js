@@ -4576,36 +4576,78 @@ function exportHistoryCsv() {
 }
 
 function populateIntermittentiDialog() {
-  document.querySelector("#intermittentiDay").innerHTML = weekDays
-    .map((day) => `<option value="${day.key}">${escapeHtml(day.label)}</option>`)
-    .join("");
-  document.querySelector("input[name='intermittentiScope'][value='week']").checked = true;
+  const intermittentEmployees = employees
+    .filter((employee) => employee.intermittent)
+    .sort((a, b) => a.name.localeCompare(b.name, "it", { sensitivity: "base" }));
+  document.querySelector("#intermittentiEmployeeList").innerHTML = intermittentEmployees.length
+    ? intermittentEmployees.map((employee) => `
+        <label class="checkbox-field" title="${escapeHtml(employee.name)}">
+          <input class="intermittenti-employee-option" type="checkbox" value="${escapeHtml(employee.id)}" checked>
+          <span>${escapeHtml(employee.name)}${employee.archived ? " · Archivio" : ""}</span>
+        </label>
+      `).join("")
+    : '<div class="empty-state">Nessun dipendente a chiamata.</div>';
+  document.querySelector("#intermittentiDateFrom").value = dateInputValue(weekDays[0].date);
+  document.querySelector("#intermittentiDateTo").value = dateInputValue(weekDays[6].date);
   document.querySelector("#intermittentiEmployerFiscalCode").value = companySettings.employerFiscalCode || "";
   document.querySelector("#intermittentiEmail").value = companySettings.agencyEmail || "";
-  updateIntermittentiScopeFields();
+  updateIntermittentiEmployeeSelectionState();
   renderIntermittentiPreview();
 }
 
-function updateIntermittentiScopeFields() {
-  const scope = document.querySelector("input[name='intermittentiScope']:checked").value;
-  document.querySelectorAll(".intermittenti-day-field").forEach((field) => {
-    field.classList.toggle("hidden", scope !== "day");
-  });
+function selectedIntermittentiEmployeeIds() {
+  return new Set([...document.querySelectorAll(".intermittenti-employee-option:checked")].map((input) => input.value));
+}
+
+function updateIntermittentiEmployeeSelectionState() {
+  const options = [...document.querySelectorAll(".intermittenti-employee-option")];
+  const checkedCount = options.filter((input) => input.checked).length;
+  const selectAll = document.querySelector("#intermittentiSelectAllEmployees");
+  selectAll.checked = options.length > 0 && checkedCount === options.length;
+  selectAll.indeterminate = checkedCount > 0 && checkedCount < options.length;
+}
+
+function intermittentiPeriod() {
+  const fromValue = document.querySelector("#intermittentiDateFrom").value;
+  const toValue = document.querySelector("#intermittentiDateTo").value;
+  if (!fromValue || !toValue) return { valid: false, reason: "Inserisci la data iniziale e finale." };
+  const from = dateFromInput(fromValue);
+  const to = dateFromInput(toValue);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+    return { valid: false, reason: "La data finale deve essere uguale o successiva a quella iniziale." };
+  }
+  return { valid: true, from, to, fromValue, toValue };
+}
+
+function intermittentiPeriodLabel() {
+  const period = intermittentiPeriod();
+  if (!period.valid) return "periodo-non-valido";
+  return period.fromValue === period.toValue
+    ? period.fromValue
+    : `${period.fromValue}-${period.toValue}`;
 }
 
 function workingIntermittentShifts() {
-  const scope = document.querySelector("input[name='intermittentiScope']:checked").value;
-  const dayKey = document.querySelector("#intermittentiDay").value;
-  const intermittentIds = new Set(employees.filter((employee) => employee.intermittent).map((employee) => employee.id));
-  return ensureWeek(weekOffset)
-    .filter((shift) => intermittentIds.has(shift.employeeId))
-    .filter((shift) => shift.category !== "rest" && shift.category !== "leave")
-    .filter((shift) => scope === "week" || shift.day === dayKey)
-    .sort((a, b) => shiftSortValue(a) - shiftSortValue(b));
-}
-
-function dateForShiftDay(dayKey) {
-  return weekDays.find((day) => day.key === dayKey)?.date || weekDays[0].date;
+  const period = intermittentiPeriod();
+  const selectedIds = selectedIntermittentiEmployeeIds();
+  if (!period.valid || !selectedIds.size) return [];
+  shiftsByWeek[weekOffset] = shifts;
+  const startOffset = weekOffsetForDate(period.from);
+  const endOffset = weekOffsetForDate(period.to);
+  const entries = [];
+  for (let offset = startOffset; offset <= endOffset; offset += 1) {
+    const week = Number(offset) === Number(weekOffset)
+      ? shifts
+      : (shiftsByWeek[offset] || shiftsByWeek[String(offset)] || []);
+    week.forEach((shift) => {
+      if (!selectedIds.has(shift.employeeId)) return;
+      if (shift.category === "rest" || shift.category === "leave") return;
+      const date = dateForOffsetDay(shift.day, offset);
+      if (date < period.from || date > period.to) return;
+      entries.push({ shift, date, weekOffset: offset });
+    });
+  }
+  return entries.sort((a, b) => a.date - b.date || shiftSortValue(a.shift) - shiftSortValue(b.shift));
 }
 
 function formatItalianDate(date) {
@@ -4614,8 +4656,7 @@ function formatItalianDate(date) {
 
 function buildIntermittentiRows() {
   const shiftsByEmployee = new Map();
-  workingIntermittentShifts().forEach((shift) => {
-    const date = dateForShiftDay(shift.day);
+  workingIntermittentShifts().forEach(({ shift, date }) => {
     const key = dateInputValue(date);
     const current = shiftsByEmployee.get(shift.employeeId) || new Set();
     current.add(key);
@@ -4666,6 +4707,15 @@ function renderIntermittentiPreview() {
   const rows = buildIntermittentiRows();
   const summary = document.querySelector("#intermittentiSummary");
   const preview = document.querySelector("#intermittentiPreview");
+  const period = intermittentiPeriod();
+  const selectedCount = selectedIntermittentiEmployeeIds().size;
+  const downloadButtons = [document.querySelector("#downloadIntermittentiCsv"), document.querySelector("#downloadIntermittentiPdf")];
+  if (!period.valid || !selectedCount) {
+    summary.textContent = period.valid ? "Seleziona almeno un dipendente." : period.reason;
+    preview.innerHTML = `<div class="empty-state">${escapeHtml(period.valid ? "Scegli uno o più dipendenti a chiamata." : "Controlla il periodo selezionato.")}</div>`;
+    downloadButtons.forEach((button) => { button.disabled = true; });
+    return;
+  }
   const missingFiscalCodes = rows.filter((row) => !row.fiscalCode).length;
   const pdfCount = intermittentiPdfChunks(rows).length;
   summary.textContent = rows.length
@@ -4673,8 +4723,10 @@ function renderIntermittentiPreview() {
     : "Nessun turno per dipendenti a chiamata nel periodo selezionato.";
   if (!rows.length) {
     preview.innerHTML = '<div class="empty-state">Marca i dipendenti a chiamata e inserisci il codice fiscale nella loro scheda.</div>';
+    downloadButtons.forEach((button) => { button.disabled = true; });
     return;
   }
+  downloadButtons.forEach((button) => { button.disabled = false; });
   preview.innerHTML = `
     <div class="intermittenti-table">
       <div class="intermittenti-row head">
@@ -4708,10 +4760,7 @@ function intermittentiPdfChunks(rows) {
 }
 
 function intermittentiFileBaseName() {
-  const scope = document.querySelector("input[name='intermittentiScope']:checked").value;
-  const selectedDay = weekDays.find((day) => day.key === document.querySelector("#intermittentiDay").value);
-  const label = scope === "day" && selectedDay ? selectedDay.label : formatWeekRange();
-  return `chiamate-intermittenti-${label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  return `chiamate-intermittenti-${intermittentiPeriodLabel().replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 }
 
 function intermittentiPdfFileName(baseName, index, total) {
@@ -4745,7 +4794,7 @@ async function downloadIntermittentiCsv() {
   await logManagerActivity({
     type: "Chiamate",
     title: "CSV chiamate generato",
-    detail: `${rows.length} lavoratori · ${formatWeekRange()}`,
+    detail: `${rows.length} righe · ${intermittentiPeriodLabel()}`,
     weekOffset
   });
 }
@@ -4765,7 +4814,7 @@ async function downloadIntermittentiPdf() {
   await logManagerActivity({
     type: "Chiamate",
     title: "PDF chiamate generato",
-    detail: `${rows.length} righe · ${chunks.length} PDF · ${formatWeekRange()}`,
+    detail: `${rows.length} righe · ${chunks.length} PDF · ${intermittentiPeriodLabel()}`,
     weekOffset
   });
 }
@@ -5288,12 +5337,20 @@ document.querySelector("#cancelIntermittentiDialog").addEventListener("click", (
 document.querySelector("#refreshIntermittentiPreview").addEventListener("click", renderIntermittentiPreview);
 document.querySelector("#downloadIntermittentiCsv").addEventListener("click", downloadIntermittentiCsv);
 document.querySelector("#downloadIntermittentiPdf").addEventListener("click", downloadIntermittentiPdf);
-document.querySelector("#intermittentiDay").addEventListener("change", renderIntermittentiPreview);
-document.querySelectorAll("input[name='intermittentiScope']").forEach((input) => {
-  input.addEventListener("change", () => {
-    updateIntermittentiScopeFields();
-    renderIntermittentiPreview();
+document.querySelector("#intermittentiSelectAllEmployees").addEventListener("change", (event) => {
+  document.querySelectorAll(".intermittenti-employee-option").forEach((input) => {
+    input.checked = event.target.checked;
   });
+  updateIntermittentiEmployeeSelectionState();
+  renderIntermittentiPreview();
+});
+document.querySelector("#intermittentiEmployeeList").addEventListener("change", (event) => {
+  if (!event.target.matches(".intermittenti-employee-option")) return;
+  updateIntermittentiEmployeeSelectionState();
+  renderIntermittentiPreview();
+});
+["#intermittentiDateFrom", "#intermittentiDateTo"].forEach((selector) => {
+  document.querySelector(selector).addEventListener("change", renderIntermittentiPreview);
 });
 document.querySelector("#openPrintExport").addEventListener("click", () => {
   populatePrintDialog();

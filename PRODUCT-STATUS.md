@@ -1,6 +1,6 @@
 # Stato prodotto
 
-Aggiornato: 2 agosto 2026
+Aggiornato: 12 agosto 2026
 
 ## Versione corrente
 
@@ -22,11 +22,28 @@ Aggiornato: 2 agosto 2026
   della sede invece di sceglierne una arbitrariamente.
 - Richieste di ferie e riposo, capoturno, messaggi e notifiche.
 - Timbrature, totem, presenze, importazione ed esportazione.
-- Chiamate intermittenti, mance, buste paga e documenti dipendenti.
+- Chiamate intermittenti con filtro multiplo per dipendenti e intervallo libero
+  di date, mance, buste paga e documenti dipendenti.
 - Il modulo Mance esporta il prospetto mensile in formato Excel `.xlsx`, con
   riepilogo, ore, percentuali, quote contanti/POS e totali per dipendente.
 - Mansionario, verifiche, fatturato, produttivita e raggruppamenti multi-luogo.
 - Backup e storico attivita.
+
+## Muretto Cucina
+
+- Disponibile la PWA standalone `/kitchen/`, separata nell'uso dall'app turni
+  ma servita dalla stessa codebase e dallo stesso deployment.
+- Il modulo registra disponibilita, quantita indicativa, data di preparazione,
+  posizione, note, foto e storico delle preparazioni della cucina.
+- Elena e Azmi gestiscono catalogo e posizioni; Reyen e Ivan possono aggiornare
+  disponibilita, quantita e ubicazione. I PIN vengono impostati al primo avvio
+  e sono conservati esclusivamente in forma cifrata nel disco persistente.
+- La consegna giornaliera richiede il controllo di tutte le zone, viene
+  pubblicata dal turno del mattino e presa in carico da Azmi.
+- L'app conserva l'ultimo stato sul telefono, accoda le modifiche offline e
+  presenta un confronto esplicito se due dispositivi modificano lo stesso dato.
+- Archivio, foto, backup giornalieri e notifiche sono separati dai dati
+  dell'app turni. La funzione `kitchen_handover` appartiene al piano Controllo.
 
 ## Interfaccia bilingue
 
@@ -87,6 +104,7 @@ Aggiornato: 2 agosto 2026
 - Le pagine SEO usano visual originali distinti per differenziare turni, presenze QR, multi-sede e prezzi anche in condivisione social.
 - Pubblicate tre guide operative approfondite su organizzazione dei turni, presenze/timbrature e gestione di ferie, permessi e disponibilita, ciascuna con visual originale, dati strutturati Article/FAQ e collegamenti al prodotto.
 - Aggiunte due guide SEO su cambi turno e sostituzioni e sul controllo del costo del personale, con visual originali, dati strutturati Article/FAQ, fonti ufficiali dove pertinenti e collegamenti interni.
+- Il messaggio commerciale chiarisce che la prova di 2 mesi parte senza carta di credito.
 
 ## Prossimo intervento di prodotto
 
@@ -98,6 +116,7 @@ Collegare il cambio stato licenza a un flusso di pagamento e automatizzare la cr
 - Lead Ads qualificati automaticamente per regione, staff, ruolo e tempistica; attribuzione UTM, GCLID e FBCLID salvata nel controllo lead.
 - Pipeline commerciale estesa da nuovo a cliente/perso, con storico stato, motivo perdita ed export conversioni offline Google Ads.
 - Google tag, Meta Pixel e Meta Conversions API sono opzionali e attivati solo dopo consenso; gli identificativi si configurano tramite ambiente.
+- Ogni nuovo lead può inviare un avviso a `assistenza@turniristorante.it`; SMTP e l'eventuale destinatario alternativo `LEAD_NOTIFICATION_EMAIL` restano esclusivamente nelle variabili d'ambiente del servizio.
 - Kit campagne, budget, annunci Search, negative, brief Meta, storyboard e report settimanale conservati in `marketing/` e non esposti dal server.
 - Due creativita originali senza volto sono disponibili sotto `assets/ads/`.
 

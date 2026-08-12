@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-08-12
+
+- Aggiunti alle chiamate intermittenti i filtri combinabili per uno o più
+  dipendenti e per un intervallo libero di date, anche su più settimane.
+- Allineati anteprima, CSV, PDF, nomi dei file e storico operativo allo stesso
+  periodo e agli stessi dipendenti selezionati.
+- Aggiunte validazione dell'intervallo, selezione rapida di tutti i dipendenti,
+  interfaccia mobile e traduzioni inglesi dei nuovi controlli.
+
+## 2026-08-07
+
+- Aggiunta la notifica email dei nuovi lead verso l'indirizzo commerciale configurabile, senza interrompere la raccolta lead se SMTP non è disponibile.
+- Documentate le variabili SMTP e `LEAD_NOTIFICATION_EMAIL` necessarie nel servizio di hosting.
+
+## 2026-08-06
+
+- Chiarito su home, pagina prezzi e pagine SEO prodotto che la prova di 2 mesi
+  non richiede carta di credito.
+
+## 2026-08-03
+
+- Aggiunta la PWA standalone `Muretto Cucina` all'indirizzo `/kitchen/`, con
+  interfaccia mobile installabile e accesso separato tramite nome e PIN cifrato.
+- Implementati catalogo preparazioni, stati Disponibile/Quasi finito/Finito,
+  quantita indicativa, data di preparazione, posizioni configurabili, note,
+  foto protette e storico degli aggiornamenti.
+- Aggiunto il flusso di consegna Elena-Azmi: controllo obbligatorio di tutte le
+  zone, pubblicazione del riepilogo, presa in carico e promemoria dedicati.
+- Aggiunti cache offline, coda idempotente, rilevamento dei conflitti tra
+  telefoni, salvataggi atomici e backup giornalieri separati.
+- Introdotta la capability `kitchen_handover` nel piano Controllo e aggiunti
+  test automatici per permessi, PIN, disponibilita, foto, conflitti, consegne e
+  promemoria.
+
 ## 2026-08-02
 
 - Aggiunto nel modulo Mance il pulsante `Esporta Excel` per scaricare il
