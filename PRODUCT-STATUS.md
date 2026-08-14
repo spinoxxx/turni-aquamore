@@ -1,6 +1,6 @@
 # Stato prodotto
 
-Aggiornato: 12 agosto 2026
+Aggiornato: 14 agosto 2026
 
 ## Versione corrente
 
@@ -13,6 +13,8 @@ Aggiornato: 12 agosto 2026
 ## Funzioni presenti
 
 - Pianificazione turni, pubblicazione per settimana o giorno e area dipendente.
+- La settimana visualizzata dal manager resta invariata dopo i salvataggi e le
+  sincronizzazioni con il server.
 - Ogni turno distingue la sede dalla postazione operativa; le postazioni
   predefinite sono Sala, Bar, Ristorante, Lavaggio e Cucina e possono essere
   personalizzate nelle impostazioni azienda.

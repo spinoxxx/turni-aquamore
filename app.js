@@ -402,12 +402,18 @@ function loadState() {
 
 function applyState(state) {
   if (!state) return;
+  const visibleWeekOffset = window.TurniWeekState.resolveVisibleWeekOffset({
+    backendEnabled,
+    authenticated: Boolean(currentUser),
+    currentWeekOffset: weekOffset,
+    stateWeekOffset: state.weekOffset
+  });
   employees = Array.isArray(state.employees) ? state.employees.map(normalizeEmployee) : employees.map(normalizeEmployee);
   const stationMigration = window.TurniStations.migrateLegacyStationState(state.companySettings, state.shiftsByWeek);
   companySettings = normalizeCompanySettings(stationMigration.companySettings);
   shiftPresets = state.shiftPresets || shiftPresets;
   shiftsByWeek = stationMigration.shiftsByWeek || shiftsByWeek;
-  weekOffset = Number(state.weekOffset) || 0;
+  weekOffset = visibleWeekOffset;
   appMode = state.appMode || appMode;
   activeEmployeeId = state.activeEmployeeId || activeEmployeeId;
   timeOffRequests = Array.isArray(state.timeOffRequests) ? state.timeOffRequests : timeOffRequests;

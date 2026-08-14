@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-14
+
+- Corretta la navigazione del planning: dopo la creazione, modifica o altra
+  sincronizzazione server-side, l'app mantiene la settimana che il manager sta
+  visualizzando invece di tornare alla settimana salvata nello stato remoto.
+- Separata la posizione di navigazione locale dai dati condivisi ricevuti dal
+  server e aggiunto un test di regressione dedicato.
+
 ## 2026-08-12
 
 - Aggiunti alle chiamate intermittenti i filtri combinabili per uno o più

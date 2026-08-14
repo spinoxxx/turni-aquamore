@@ -6,8 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js && node --check kitchen-api.js && node --check kitchen-store.js && node --check kitchen/app.js && node --check kitchen/sw.js && node --check tips-export.js && node --check license.js && node --check i18n.js && node --check mansionario.js && node --check manual-attendance.js && node --check leads.js && node --check licenze.js && node --check landing.js && node --check ads-lombardia.js && node --check marketing-consent.js",
-    "test": "node tests/license.test.js && node tests/kitchen.test.js && node tests/i18n.test.js && node tests/stations.test.js && node tests/intermittent-filters.test.js && node tests/tips-export.test.js && node tests/marketing.test.js && node tests/seo-content.test.js && node products/turni-ristorante-starter/tests/starter.test.js"
+    "check": "node --check server.js && node --check app.js && node --check week-state.js && node --check kitchen-api.js && node --check kitchen-store.js && node --check kitchen/app.js && node --check kitchen/sw.js && node --check tips-export.js && node --check license.js && node --check i18n.js && node --check mansionario.js && node --check manual-attendance.js && node --check leads.js && node --check licenze.js && node --check landing.js && node --check ads-lombardia.js && node --check marketing-consent.js",
+    "test": "node tests/license.test.js && node tests/kitchen.test.js && node tests/i18n.test.js && node tests/stations.test.js && node tests/week-state.test.js && node tests/intermittent-filters.test.js && node tests/tips-export.test.js && node tests/marketing.test.js && node tests/seo-content.test.js && node products/turni-ristorante-starter/tests/starter.test.js"
   },
   "dependencies": {
     "nodemailer": "^6.9.16",
