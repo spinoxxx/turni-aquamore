@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-27 — Dipendenze di sicurezza
+
+- Aggiornati Nodemailer a 10.2.1 e PDF.js a 6.4.299, adeguando il rilascio
+  delle risorse PDF alla nuova API.
+- Sostituita la versione npm obsoleta di SheetJS con la distribuzione ufficiale
+  0.20.3; mantenute importazione ed esportazione Excel.
+- Aggiunto il lockfile per riprodurre le dipendenze verificate e richiesto
+  Node.js 24.22.1 nella linea 24.x.
+
 ## 2026-10-27
 
 - Ripristinato il modulo condiviso `stations.js`, gia richiesto dal server e

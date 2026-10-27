@@ -2,6 +2,11 @@
 
 Aggiornato: 14 agosto 2026
 
+## Aggiornamento sicurezza dipendenze — 27 ottobre 2026
+
+- Nodemailer 10.2.1, PDF.js 6.4.299 e SheetJS ufficiale 0.20.3.
+- Dipendenze bloccate in package-lock.json; runtime Node.js 24.22.1.
+
 ## Versione corrente
 
 - Base sorgente: `v127-fix-gruppi-statistiche`.

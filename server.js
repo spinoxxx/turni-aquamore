@@ -1783,11 +1783,12 @@ function safeDownloadName(value) {
 async function pdfPageTexts(buffer) {
   if (!pdfJsPromise) pdfJsPromise = import("pdfjs-dist/legacy/build/pdf.mjs");
   const pdfjs = await pdfJsPromise;
-  const document = await pdfjs.getDocument({
+  const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
     disableWorker: true,
     useSystemFonts: true
-  }).promise;
+  });
+  const document = await loadingTask.promise;
   try {
     const texts = [];
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
@@ -1797,7 +1798,7 @@ async function pdfPageTexts(buffer) {
     }
     return texts;
   } finally {
-    await document.destroy();
+    await loadingTask.destroy();
   }
 }
 

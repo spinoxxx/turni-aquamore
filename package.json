@@ -7,16 +7,17 @@
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js && node --check app.js && node --check week-state.js && node --check kitchen-api.js && node --check kitchen-store.js && node --check kitchen/app.js && node --check kitchen/sw.js && node --check tips-export.js && node --check license.js && node --check i18n.js && node --check mansionario.js && node --check manual-attendance.js && node --check leads.js && node --check licenze.js && node --check landing.js && node --check ads-lombardia.js && node --check marketing-consent.js",
-    "test": "node tests/license.test.js && node tests/kitchen.test.js && node tests/i18n.test.js && node tests/stations.test.js && node tests/week-state.test.js && node tests/intermittent-filters.test.js && node tests/tips-export.test.js && node tests/marketing.test.js && node tests/seo-content.test.js && node products/turni-ristorante-starter/tests/starter.test.js"
+    "test": "node tests/license.test.js && node tests/kitchen.test.js && node tests/i18n.test.js && node tests/stations.test.js && node tests/week-state.test.js && node tests/intermittent-filters.test.js && node tests/tips-export.test.js && node tests/marketing.test.js && node tests/seo-content.test.js && node products/turni-ristorante-starter/tests/starter.test.js",
+    "test:dependencies": "node tests/security-dependencies.test.js"
   },
   "dependencies": {
-    "nodemailer": "^6.9.16",
+    "nodemailer": "10.2.1",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.6.205",
+    "pdfjs-dist": "6.4.299",
     "web-push": "^3.6.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "engines": {
-    "node": ">=20.16"
+    "node": ">=24.22.1 <25"
   }
 }
