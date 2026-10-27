@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-27
+
+- Ripristinato il modulo condiviso `stations.js`, gia richiesto dal server e
+  dalla pagina app, la cui assenza impediva i deploy. Inclusi i test originali
+  di migrazione sedi e postazioni.
+- Aggiornamento di sicurezza Node.js a 24.22.1 configurato sul servizio Render.
+
 ## 2026-08-14
 
 - Corretta la navigazione del planning: dopo la creazione, modifica o altra
